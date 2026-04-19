@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Hoja de Vida - Heidi</title>
+    <style>
+        /* Estilos generales */
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f4f4f9;
+            color: #333;
+        }
+
+        h2 {
+            color: #3b0b27;
+            border-bottom: 2px solid #d47cb6;
+            padding-bottom: 5px;
+        }
+
+        /* Contenedor principal */
+        .container {
+            width: 80%;
+            margin: auto;
+            background: #fff;
+            padding: 20px;
+            box-shadow: 0px 0px 10px rgba(0,0,0,0.1);
+        }
+
+        /* Sección de datos personales */
+        .datos-personales {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .datos-personales img {
+            width: 250px;
+            height: 250px;
+            border-radius: 50%;
+            margin-right: 40px;
+        }
+
+        /* Tabla de referencias */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+
+        table, th, td {
+            border: 1px solid #4d0030;
+        }
+
+        th, td {
+            padding: 10px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f3d5e8;
+            color: rgb(8, 8, 8);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="datos-personales">
+            <img src="panchito.png" alt="foto personal"/>
+            <div>
+                <h2> Datos Personales</h2>
+                <p><strong>Nombre:</strong> Heidi Xiomara Indio Baion</p>
+                <p><strong>Direnccion:</strong> Manta-Manabi-Ecuador</p>
+                <p><strong>Telefono:</strong>0991272741</p>
+                <p><strong>Email:</strong>heidybailon@gmail.com</p>
+            </div>
+        </div>
+        <div class="estudios">
+            <h2> Estudios Resalizados</h2>
+            <ul>
+                <li> Bachillerato En Ciencias - Unidad Educativa "Replica Manta"</li>
+                <li> Estudiante De Software - Unidad Ecucativa "Eloy Alfaro"</li>
+            </ul>
+        </div>
+        <div class="experiencia">
+            <h2> Experiencia Lavoral</h2>
+            <ul>
+                <li> Atencion Al Cliente</li>
+            </ul>
+        </div>
+        <div class="capacitaciones">
+            <h2> Capacitaciones</h2>
+            <ul>
+                <li>Primeros Auxilios</li>
+                <li>Corte y Concecciones</li>
+                <li>Reposteria</li>
+
+            </ul>
+        </div>
+        <div class="referencias">
+            <h2> Referencias </h2>
+            <table>
+                <tr>
+                    <th>Nombre</th>
+                    <th>Cargo</th>
+                    <th>Telefono</th>
+                    <th>Email</th>
+                </tr>
+                <tr>
+                    <td>1</td>
+                    <td>2</td>
+                    <td>3</td>
+                    <td>4</td>
+                </tr>
+                <tr>
+                    <td>a</td>
+                    <td>b</td>
+                    <td>c</td>
+                    <td>d</td>
+                </tr>
+                <tr>
+                    <td>i</td>
+                    <td>ii</td>
+                    <td>iii</td>
+                    <td>iv</td>
+                </tr>
+            </table>
+        </div>
+    </div>
+</body>
+</html>
