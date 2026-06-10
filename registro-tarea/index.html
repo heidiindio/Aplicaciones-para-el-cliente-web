@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Registro de Estudiantes</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="form-container">
+    <h2>Registro</h2>
+    <form id="registroForm">
+      <div class="grid">
+        <div class="campo">
+          <label for="cedula">Cédula</label>
+          <input type="text" id="cedula" required>
+        </div>
+        <div class="campo">
+          <label for="apellidos">Apellidos</label>
+          <input type="text" id="apellidos" required>
+        </div>
+        <div class="campo">
+          <label for="nombres">Nombres</label>
+          <input type="text" id="nombres" required>
+        </div>
+        <div class="campo">
+          <label for="telefono">Teléfono</label>
+          <input type="text" id="telefono">
+        </div>
+        <div class="campo">
+          <label for="correo">Correo</label>
+          <input type="email" id="correo" required>
+        </div>
+        <div class="campo">
+          <label for="facultad">Facultad</label>
+          <input type="text" id="facultad" required>
+        </div>
+        <div class="campo">
+          <label for="nivel">Nivel</label>
+          <select id="nivel" required>
+            <option value="">...</option>
+            <option value="1">1</option>
+            <option value="2">2</option>
+            <option value="3">3</option>
+          </select>
+        </div>
+        <div class="campo">
+          <label for="paralelo">Paralelo</label>
+          <input type="text" id="paralelo" required>
+        </div>
+      </div>
+      <button type="submit" class="btn">Guardar</button>
+    </form>
+    <div class="mensaje" id="mensaje"></div>
+  </div>
+
+  <div class="tabla-container">
+    <h3>Estudiantes Registrados</h3>
+    <table id="tablaEstudiantes">
+      <thead>
+        <tr>
+          <th>Cédula</th>
+          <th>Apellidos</th>
+          <th>Nombres</th>
+          <th>Correo</th>
+          <th>Facultad</th>
+          <th>Nivel</th>
+          <th>Paralelo</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <script src="acript.js"></script>
+</body>
+</html>
