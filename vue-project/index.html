@@ -1,0 +1,1355 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sistema de Gestión Documental - ULEAM</title>
+  <!-- Google Fonts para tipografía moderna -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- Font Awesome para iconos -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <div id="app" v-cloak>
+    
+    <!-- NOTIFICACIONES TOASTS FLOTANTES -->
+    <div class="toast-container">
+      <div v-for="toast in toasts" :key="toast.id" :class="['toast', toast.tipo]">
+        <i class="fas" :class="toast.tipo === 'success' ? 'fa-circle-check' : toast.tipo === 'error' ? 'fa-circle-exclamation' : toast.tipo === 'warning' ? 'fa-triangle-exclamation' : 'fa-circle-info'"></i>
+        <span class="toast-mensaje">{{ toast.mensaje }}</span>
+      </div>
+    </div>
+
+    <!-- PANTALLA DE INICIO DE SESIÓN / RECUPERACIÓN (DIVIDIDA) -->
+    <div id="login-layout" v-if="!sesion.logueado">
+      <!-- Lado izquierdo: Banner Institucional -->
+      <div class="login-banner">
+        <div class="banner-overlay"></div>
+        <div class="banner-content">
+          <img src="logo.png" alt="Logo Uleam" class="banner-logo">
+          <span class="banner-brand-name">ULEAM · Secretaría General</span>
+          <div class="banner-divider"></div>
+          <h2>Sistema de Gestión Documental</h2>
+          <p class="banner-tagline">Plataforma institucional para el registro, firma, delegación y archivo de trámites oficiales de la Universidad Laica Eloy Alfaro de Manabí.</p>
+          <div class="banner-features">
+            <div class="feature-item">
+              <i class="fas fa-signature"></i>
+              <span>Firma digital con estándar criptográfico institucional.</span>
+            </div>
+            <div class="feature-item">
+              <i class="fas fa-folder-tree"></i>
+              <span>Organización digital y archivo automatizado de documentos.</span>
+            </div>
+            <div class="feature-item">
+              <i class="fas fa-share-nodes"></i>
+              <span>Delegación inmediata entre carreras y facultades.</span>
+            </div>
+            <div class="feature-item">
+              <i class="fas fa-chart-line"></i>
+              <span>Estadísticas en tiempo real del flujo documental.</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Lado derecho: Formulario de Login / Recuperar -->
+      <div class="login-form-container">
+        <!-- Formulario Iniciar Sesión -->
+        <div class="login-card" v-if="!mostrandoRecuperar">
+          <div class="login-header">
+            <h3>Iniciar Sesión</h3>
+            <p>Acceda al Sistema de Gestión Documental</p>
+          </div>
+          
+          <form @submit.prevent="iniciarSesion">
+            <div class="form-group">
+              <label for="usuario"><i class="fas fa-user-tie"></i> Usuario o Correo:</label>
+              <input type="text" id="usuario" v-model="loginForm.usuario" placeholder="Ej: admin o nombre.apellido@live.uleam.edu.ec" required autocomplete="username">
+            </div>
+
+            <div class="form-group">
+              <label for="password"><i class="fas fa-lock"></i> Contraseña:</label>
+              <input type="password" id="password" v-model="loginForm.password" placeholder="••••••••" required autocomplete="current-password">
+            </div>
+
+            <div class="login-options">
+              <label class="checkbox-container">
+                <input type="checkbox" checked>
+                <span class="checkmark"></span>
+                Recordarme en este equipo
+              </label>
+              <a href="#" @click.prevent="mostrandoRecuperar = true; recuperarClaveStep = 1" class="forgot-link">¿Olvidó su contraseña?</a>
+            </div>
+
+            <button type="submit" :disabled="cargandoLogin" class="btn-primary-large">
+              <span v-if="cargandoLogin"><i class="fas fa-spinner fa-spin"></i> Ingresando...</span>
+              <span v-else>Ingresar al Sistema <i class="fas fa-arrow-right-to-bracket"></i></span>
+            </button>
+          </form>
+          
+          <p id="mensaje-login-err" v-if="mensajeLogin">{{ mensajeLogin }}</p>
+
+          <!-- Credenciales Demo Dropdown para testing rápido -->
+          <details class="demo-details">
+            <summary><i class="fas fa-key"></i> Ver cuentas de prueba (Desarrollo)</summary>
+            <div class="demo-accounts-grid">
+              <div class="demo-acc">
+                <strong>Administrador:</strong>
+                <code>admin</code> / <code>1234</code>
+              </div>
+              <div class="demo-acc">
+                <strong>Usuario Común (Secretaría):</strong>
+                <code>user</code> / <code>1234</code>
+              </div>
+              <div class="demo-acc">
+                <strong>Director de Salud:</strong>
+                <code>director.salud</code> / <code>1234</code>
+              </div>
+              <div class="demo-acc">
+                <strong>Docente Software:</strong>
+                <code>docente.soft</code> / <code>1234</code>
+              </div>
+            </div>
+          </details>
+        </div>
+
+        <!-- Formulario Recuperar Contraseña -->
+        <div class="login-card" v-else>
+          <div class="login-header">
+            <h3>Restablecer Contraseña</h3>
+            <p>Siga los pasos para recuperar el acceso a su cuenta</p>
+          </div>
+
+          <!-- Paso 1: Solicitar Código -->
+          <div v-if="recuperarClaveStep === 1">
+            <form @submit.prevent="solicitarCodigoRecuperar">
+              <div class="form-group">
+                <label for="recup-email"><i class="fas fa-envelope"></i> Ingrese su correo o usuario:</label>
+                <input type="text" id="recup-email" v-model="recuperarForm.usuario" placeholder="Ej: ana.mendoza@live.uleam.edu.ec" required>
+              </div>
+              <button type="submit" :disabled="recuperarCargando" class="btn-primary-large">
+                <span v-if="recuperarCargando"><i class="fas fa-spinner fa-spin"></i> Solicitando código...</span>
+                <span v-else>Enviar Código de Verificación <i class="fas fa-paper-plane"></i></span>
+              </button>
+            </form>
+          </div>
+
+          <!-- Paso 2: Introducir Código y Cambiar Clave -->
+          <div v-if="recuperarClaveStep === 2">
+            <!-- Simulación en pantalla del código para pruebas cómodas -->
+            <div class="dev-alert" v-if="codigoRecuperacionSimulado">
+              <strong><i class="fas fa-envelope-open-text"></i> [Simulación de Correo]</strong><br>
+              Código enviado: <strong style="font-size: 16px; color: var(--primary-color);">{{ codigoRecuperacionSimulado }}</strong>
+            </div>
+
+            <form @submit.prevent="confirmarNuevaClave">
+              <div class="form-group">
+                <label for="recup-codigo"><i class="fas fa-key"></i> Código de 6 Dígitos:</label>
+                <input type="text" id="recup-codigo" v-model="recuperarForm.codigo" placeholder="Ej: 123456" required maxlength="6" style="text-align: center; letter-spacing: 5px; font-weight: bold; font-size: 18px;">
+              </div>
+              <div class="form-group">
+                <label for="recup-pass"><i class="fas fa-lock"></i> Nueva Contraseña:</label>
+                <input type="password" id="recup-pass" v-model="recuperarForm.nuevaClave" placeholder="Mínimo 4 caracteres" required>
+              </div>
+              <div class="form-group">
+                <label for="recup-pass-conf"><i class="fas fa-check-double"></i> Confirmar Contraseña:</label>
+                <input type="password" id="recup-pass-conf" v-model="recuperarForm.confirmarClave" placeholder="Confirme la contraseña" required>
+              </div>
+              <button type="submit" :disabled="recuperarCargando" class="btn-primary-large">
+                <span v-if="recuperarCargando"><i class="fas fa-spinner fa-spin"></i> Restableciendo...</span>
+                <span v-else>Guardar Nueva Contraseña <i class="fas fa-save"></i></span>
+              </button>
+            </form>
+          </div>
+
+          <p class="recuperar-err" v-if="recuperarMensaje">{{ recuperarMensaje }}</p>
+
+          <div class="login-footer">
+            <a href="#" @click.prevent="cancelarRecuperar" class="back-login-link"><i class="fas fa-arrow-left"></i> Volver al Inicio de Sesión</a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PANTALLA PRINCIPAL DEL SISTEMA (LOGUEADO) -->
+    <div id="sistema" v-if="sesion.logueado">
+      
+      <!-- MENU SIDEBAR IZQUIERDO -->
+      <aside class="sidebar">
+        <div class="sidebar-brand">
+          <img src="logo.png" class="brand-logo" alt="Uleam Logo">
+          <div class="brand-subtitle">SECRETARÍA GENERAL</div>
+        </div>
+        
+        <!-- Tarjeta de usuario en el sidebar -->
+        <div class="sidebar-user-card" @click="cambiarVista('perfil')">
+          <div class="user-avatar-container">
+            <img v-if="sesion.fotoPerfil" :src="sesion.fotoPerfil" class="user-avatar" alt="Avatar">
+            <div v-else class="user-avatar-initials">{{ sesion.usuario.charAt(0) }}</div>
+          </div>
+          <div class="user-info">
+            <div class="user-name">{{ sesion.usuario }}</div>
+            <div class="user-faculty">{{ sesion.facultad || 'Sin Facultad' }}</div>
+          </div>
+        </div>
+
+        <nav class="sidebar-nav">
+          <ul>
+            <li v-for="item in menu" :key="item.id" :class="{ activo: vistaActual === item.id }">
+              <a href="#" @click.prevent="cambiarVista(item.id)">
+                <i class="fas" :class="item.icono"></i>
+                <span>{{ item.texto }}</span>
+              </a>
+            </li>
+          </ul>
+        </nav>
+        
+        <div class="sidebar-footer">
+          <div class="status-online"><span class="dot-online"></span> En Línea</div>
+          <button class="btn-logout" @click="cerrarSesion" title="Cerrar Sesión"><i class="fas fa-power-off"></i> Salir</button>
+        </div>
+      </aside>
+
+      <!-- SECCION PRINCIPAL DE CONTENIDO -->
+      <main>
+        <!-- BARRA SUPERIOR -->
+        <div class="barra-superior">
+          <div class="seccion-titulo-container">
+            <h2 class="seccion-titulo">{{ menu.find(m => m.id === vistaActual)?.texto || 'Gestión' }}</h2>
+          </div>
+          
+          <div class="barra-acciones">
+            <!-- Botón Modo Oscuro -->
+            <button class="btn-icon" @click="toggleTemaOscuro" :title="temaOscuro ? 'Cambiar a Modo Claro' : 'Cambiar a Modo Oscuro'">
+              <i class="fas" :class="temaOscuro ? 'fa-sun text-yellow-400' : 'fa-moon'"></i>
+            </button>
+            
+            <!-- Perfil en barra superior -->
+            <div class="perfil-superior" @click="cambiarVista('perfil')">
+              <img v-if="sesion.fotoPerfil" :src="sesion.fotoPerfil" class="header-avatar" alt="Foto">
+              <div v-else class="header-avatar-initials">{{ sesion.usuario.charAt(0) }}</div>
+              <div class="header-user-details">
+                <span class="header-username">{{ sesion.usuario.split(' ')[0] }}</span>
+                <span class="badge-rol" :class="sesion.rol.toLowerCase()">{{ sesion.rol }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 1. SECCION: PANEL DE CONTROL (INICIO) -->
+        <section id="inicio" class="seccion" v-show="vistaActual === 'inicio'">
+          <div class="dashboard-grid">
+            <div class="card rojo" @click="vistaActual = 'bandeja'; bandejaTab = 'recibidos'">
+              <div class="card-content">
+                <h3>Trámites Pendientes</h3>
+                <p class="card-num">{{ statsDashboard.pendientes }}</p>
+              </div>
+              <i class="fas fa-file-invoice-dollar card-icon"></i>
+            </div>
+            
+            <div class="card naranja" @click="vistaActual = 'bandeja'; bandejaTab = 'recibidos'">
+              <div class="card-content">
+                <h3>Por Vencer (Prioridad Alta)</h3>
+                <p class="card-num">{{ statsDashboard.porVencer }}</p>
+              </div>
+              <i class="fas fa-hourglass-half card-icon"></i>
+            </div>
+            
+            <div class="card verde" @click="vistaActual = 'bandeja'; bandejaTab = 'historial'">
+              <div class="card-content">
+                <h3>Firmados Hoy</h3>
+                <p class="card-num">{{ statsDashboard.firmasHoy }}</p>
+              </div>
+              <i class="fas fa-signature card-icon"></i>
+            </div>
+            
+            <div class="card azul" @click="vistaActual = 'archivos'; archivosTab = 'explorador'">
+              <div class="card-content">
+                <h3>Documentos Recibidos</h3>
+                <p class="card-num">{{ statsDashboard.recibidos }}</p>
+              </div>
+              <i class="fas fa-file-shield card-icon"></i>
+            </div>
+          </div>
+
+          <!-- DETALLE RAPIDO DASHBOARD -->
+          <div class="dashboard-row" style="margin-top: 25px;">
+            <div class="panel-card" style="flex: 1.8;">
+              <div class="panel-header">
+                <h4><i class="fas fa-list-check"></i> Trámites de Acción Rápida</h4>
+                <div class="panel-header-actions">
+                  <button class="btn-outline-small" @click="seleccionarDetalleDashboard('pendientes')" :class="{active: dashboardDetalle.tipo === 'pendientes'}">Pendientes</button>
+                  <button class="btn-outline-small" @click="seleccionarDetalleDashboard('porVencer')" :class="{active: dashboardDetalle.tipo === 'porVencer'}">Alta Prioridad</button>
+                  <button class="btn-outline-small" @click="seleccionarDetalleDashboard('firmasHoy')" :class="{active: dashboardDetalle.tipo === 'firmasHoy'}">Firmas Hoy</button>
+                </div>
+              </div>
+              
+              <div class="panel-body">
+                <ul class="lista-dashboard-rapida" v-if="dashboardDetalle.items.length">
+                  <li v-for="item in dashboardDetalle.items" :key="item.id" class="item-dashboard-rapido">
+                    <div class="item-info">
+                      <span class="badge-prioridad" :class="item.prioridad">{{ item.prioridad.toUpperCase() }}</span>
+                      <strong class="item-ticket">{{ item.ticket }}</strong>
+                      <span class="item-asunto">{{ item.asunto }}</span>
+                    </div>
+                    <button class="btn-action-view" @click="mostrarDetalle(item.id); vistaActual = 'bandeja'; bandejaTab = 'recibidos'" title="Ver en bandeja">
+                      Procesar <i class="fas fa-arrow-right"></i>
+                    </button>
+                  </li>
+                </ul>
+                <div class="vacio-container" v-else>
+                  <i class="fas fa-folder-open empty-icon"></i>
+                  <p>No hay trámites en esta categoría por el momento.</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- GRAFICO RAPIDO -->
+            <div class="panel-card" style="flex: 1.2;">
+              <div class="panel-header">
+                <h4><i class="fas fa-chart-line"></i> Resumen de Flujo Semanal</h4>
+              </div>
+              <div class="panel-body">
+                <div class="canvas-container">
+                  <canvas ref="graficoBarra"></canvas>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+
+        <!-- 2. SECCION: MI BANDEJA (ORGANIZADA POR PESTAÑAS) -->
+        <section id="bandeja" class="seccion" v-show="vistaActual === 'bandeja'">
+          
+          <!-- SUB-PESTAÑAS DE BANDEJA -->
+          <div class="sub-tabs-container">
+            <button class="sub-tab-btn" :class="{ activo: bandejaTab === 'recibidos' }" @click="bandejaTab = 'recibidos'">
+              <i class="fas fa-envelope-open-text"></i> Bandeja de Entrada <span class="tab-badge" v-if="documentosBandeja.length">{{ documentosBandeja.length }}</span>
+            </button>
+            <button class="sub-tab-btn" :class="{ activo: bandejaTab === 'historial' }" @click="bandejaTab = 'historial'">
+              <i class="fas fa-clock-rotate-left"></i> Historial de Firmas / Negados
+            </button>
+            <button class="sub-tab-btn" :class="{ activo: bandejaTab === 'correo' }" @click="bandejaTab = 'correo'">
+              <i class="fas fa-paper-plane"></i> Mensajería Interna
+            </button>
+          </div>
+
+          <!-- PESTAÑA A: BANDEJA DE ENTRADA -->
+          <div v-show="bandejaTab === 'recibidos'" class="tab-content-layout">
+            <div class="bandeja-layout">
+              <!-- Lista de documentos en tabla -->
+              <div class="tabla-contenedor" style="flex: 1.8;">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Prioridad</th>
+                      <th>Ticket</th>
+                      <th>Fecha</th>
+                      <th>Remitente / Facultad</th>
+                      <th>Asunto</th>
+                      <th>Estado</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="doc in documentosBandeja" :key="doc.id" :class="{ seleccionada: detalleActivoId === doc.id }" @click="mostrarDetalle(doc.id)">
+                      <td>
+                        <span class="prioridad-indicator" :class="doc.prioridad">
+                          <i class="fas fa-circle"></i> {{ doc.prioridad.toUpperCase() }}
+                        </span>
+                      </td>
+                      <td><b class="doc-ticket-text">{{ doc.ticket }}</b></td>
+                      <td>{{ formatearFecha(doc.fecha) }}</td>
+                      <td>
+                        <div class="doc-remitente-name">{{ doc.remitente }}</div>
+                        <div class="doc-remitente-fac">{{ doc.facultad }}</div>
+                      </td>
+                      <td class="asunto-col">{{ doc.asunto }}</td>
+                      <td>
+                        <span class="badge-status-pill" :class="doc.estado">
+                          {{ doc.estado === 'pendiente' ? 'Pendiente' : doc.estado === 'en_proceso' ? 'En Proceso' : doc.estado }}
+                        </span>
+                      </td>
+                    </tr>
+                    <tr v-if="documentosBandeja.length === 0" class="fila-vacia">
+                      <td colspan="6">
+                        <div class="vacio-tabla-container">
+                          <i class="fas fa-circle-check text-green-500" style="font-size: 32px; margin-bottom: 10px;"></i>
+                          <p>Bandeja limpia. No hay documentos pendientes de su firma.</p>
+                        </div>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <!-- Detalle del documento lateral -->
+              <div class="detalle-documento" style="flex: 1.2;">
+                <div v-if="documentoDetalle" class="detalle-card-inner">
+                  <div class="detalle-header-card">
+                    <span class="prioridad-tag" :class="documentoDetalle.prioridad">{{ documentoDetalle.prioridad.toUpperCase() }}</span>
+                    <h4>{{ documentoDetalle.ticket }}</h4>
+                    <p class="detalle-meta-fecha"><i class="fas fa-calendar"></i> Recibido: {{ formatearFecha(documentoDetalle.fecha) }}</p>
+                  </div>
+                  
+                  <div class="detalle-body-card">
+                    <div class="detalle-field">
+                      <span class="field-label">Remitente</span>
+                      <span class="field-val"><i class="fas fa-user-circle"></i> {{ documentoDetalle.remitente }}</span>
+                    </div>
+                    <div class="detalle-field">
+                      <span class="field-label">Facultad</span>
+                      <span class="field-val"><i class="fas fa-university"></i> {{ documentoDetalle.facultad }}</span>
+                    </div>
+                    <div class="detalle-field">
+                      <span class="field-label">Asunto</span>
+                      <span class="field-val asunto-val">{{ documentoDetalle.asunto }}</span>
+                    </div>
+                    <div class="detalle-field" v-if="documentoDetalle.usuarioDestinoNombre">
+                      <span class="field-label">Delegado Actual</span>
+                      <span class="field-val delegate-val"><i class="fas fa-user-arrow-right"></i> {{ documentoDetalle.usuarioDestinoNombre }}</span>
+                    </div>
+
+                    <!-- Historial del Trámite -->
+                    <div class="historial-container-card">
+                      <span class="field-label">Ruta de Auditoría</span>
+                      <ul class="historial-lista">
+                        <li v-for="(item, index) in documentoDetalle.historial" :key="index" class="historial-step">
+                          <span class="step-time">{{ formatearFechaHora(item.fecha) }}</span>
+                          <span class="step-desc">
+                            <strong>{{ item.usuario }}:</strong> {{ item.accion }}
+                          </span>
+                        </li>
+                      </ul>
+                    </div>
+                  </div>
+
+                  <div class="detalle-footer-actions">
+                    <!-- Botón para expandir formulario de delegación -->
+                    <details class="delegar-accordion">
+                      <summary class="btn-delegar-toggle"><i class="fas fa-share-nodes"></i> Delegar Trámite...</summary>
+                      <div class="delegar-form-fields">
+                        <div class="form-group">
+                          <label for="del-fac">Facultad Destino:</label>
+                          <select id="del-fac" v-model="facultadDelegada" @change="carreraDelegada=''; usuarioDelegadoId=''">
+                            <option value="">Seleccione Facultad...</option>
+                            <option v-for="fac in facultadesParaDelegacion" :key="fac" :value="fac">{{ fac }}</option>
+                          </select>
+                        </div>
+                        <div class="form-group">
+                          <label for="del-car">Carrera Destino:</label>
+                          <select id="del-car" v-model="carreraDelegada" :disabled="!facultadDelegada" @change="usuarioDelegadoId=''">
+                            <option value="">Seleccione Carrera...</option>
+                            <option v-for="carr in obtenerCarreras(facultadDelegada)" :key="carr" :value="carr">{{ carr }}</option>
+                          </select>
+                        </div>
+                        <div class="form-group">
+                          <label for="del-usr">Usuario Responsable:</label>
+                          <select id="del-usr" v-model="usuarioDelegadoId" :disabled="!carreraDelegada">
+                            <option value="">Seleccione Responsario...</option>
+                            <option v-for="usr in usuariosParaDelegacion" :key="usr.id" :value="usr.id">{{ usr.nombre }} ({{ usr.rol }})</option>
+                          </select>
+                        </div>
+                        <button class="btn-submit-delegar" @click="delegarDocumento(documentoDetalle)"><i class="fas fa-circle-check"></i> Confirmar Delegación</button>
+                      </div>
+                    </details>
+
+                    <div class="primary-actions-buttons">
+                      <button class="btn-firmar" @click="firmarDocumento(documentoDetalle)"><i class="fas fa-signature"></i> Firmar</button>
+                      <button class="btn-denegar" @click="denegarDocumento(documentoDetalle)"><i class="fas fa-ban"></i> Denegar</button>
+                    </div>
+                  </div>
+                </div>
+                <div v-else class="detalle-vacio-sidebar">
+                  <i class="fas fa-file-signature big-icon"></i>
+                  <p>Seleccione un trámite de la lista izquierda para visualizar su información y firmar.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- PESTAÑA B: HISTORIAL DE TRÁMITES -->
+          <div v-show="bandejaTab === 'historial'" class="tab-content-layout">
+            <div class="panel-card">
+              <div class="panel-header">
+                <h4><i class="fas fa-folder-closed"></i> Registro Histórico de Despacho</h4>
+                <p>Todos los documentos que ya han sido firmados o rechazados en su cuenta</p>
+              </div>
+              <div class="panel-body">
+                <div class="tabla-contenedor">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Ticket</th>
+                        <th>Fecha de Registro</th>
+                        <th>Fecha de Firma/Rechazo</th>
+                        <th>Remitente</th>
+                        <th>Asunto</th>
+                        <th>Resolución</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr v-for="doc in historialBandeja" :key="doc.id">
+                        <td><b>{{ doc.ticket }}</b></td>
+                        <td>{{ formatearFecha(doc.fecha) }}</td>
+                        <td>{{ formatearFecha(doc.fechaFirma) }}</td>
+                        <td>{{ doc.remitente }} ({{ doc.facultad }})</td>
+                        <td>{{ doc.asunto }}</td>
+                        <td>
+                          <span class="badge-status-pill" :class="doc.resultado">
+                            {{ doc.resultado === 'firmado' ? 'Firmado' : 'Rechazado/Denegado' }}
+                          </span>
+                        </td>
+                      </tr>
+                      <tr v-if="historialBandeja.length === 0" class="fila-vacia">
+                        <td colspan="6">Aún no posee firmas registradas en el historial.</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- PESTAÑA C: MENSAJERÍA INTERNA (CORREOS) -->
+          <div v-show="bandejaTab === 'correo'" class="tab-content-layout">
+            <div class="correo-layout">
+              <!-- Formulario de redacción de correo (izquierda) -->
+              <div class="panel-correo compose-box" style="flex: 1.2;">
+                <h4><i class="fas fa-square-pen"></i> Redactar Correo Interno</h4>
+                
+                <div class="form-group">
+                  <label for="mail-dest">Destinatario:</label>
+                  <select id="mail-dest" v-model="nuevoCorreo.destinatarioId">
+                    <option value="">Seleccione Destinatario...</option>
+                    <option v-for="u in usuariosParaEnvio" :key="u.id" :value="u.id">{{ u.nombre }} ({{ u.usuario }} - {{ u.facultad }})</option>
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label for="mail-asunto">Asunto:</label>
+                  <input type="text" id="mail-asunto" v-model="nuevoCorreo.asunto" placeholder="Escriba el asunto del correo...">
+                </div>
+
+                <div class="form-group">
+                  <label for="mail-msg">Mensaje:</label>
+                  <textarea id="mail-msg" v-model="nuevoCorreo.mensaje" placeholder="Escriba el cuerpo del mensaje..." style="height: 120px;"></textarea>
+                </div>
+
+                <!-- Adjuntos locales -->
+                <div class="form-group">
+                  <label><i class="fas fa-paperclip"></i> Adjuntar desde su Computadora:</label>
+                  <div class="file-input-wrapper">
+                    <button class="btn-file-select" type="button"><i class="fas fa-file-arrow-up"></i> Seleccionar Archivo</button>
+                    <input ref="inputAdjuntoCorreo" type="file" @change="seleccionarArchivoAdjunto">
+                  </div>
+                  <div class="lista-adjuntos-borrador" v-if="nuevoCorreo.adjuntos.length">
+                    <div v-for="(adj, idx) in nuevoCorreo.adjuntos" :key="idx" class="adjunto-chip">
+                      <i class="fas fa-paperclip"></i>
+                      <span>{{ adj.nombreOriginal }}</span>
+                      <button type="button" class="btn-remove-adj" @click="quitarAdjunto(idx)">&times;</button>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Adjuntos ya guardados (Archivos Digitales del sistema) -->
+                <div class="form-group">
+                  <label><i class="fas fa-hard-drive"></i> Adjuntar de su Nube Personal:</label>
+                  <div class="nube-adjuntar-list" v-if="archivosVisibles.length">
+                    <div v-for="archivo in archivosVisibles.slice(0, 5)" :key="archivo.id" class="nube-adj-item" @click="adjuntarArchivoGuardado(archivo)">
+                      <i class="fas" :class="obtenerIconoArchivo(archivo.extension)"></i>
+                      <span class="nube-adj-title">{{ archivo.titulo }}</span>
+                      <span class="nube-adj-action"><i class="fas fa-plus"></i></span>
+                    </div>
+                  </div>
+                  <p class="empty-nube-txt" v-else>No tiene archivos en su nube para adjuntar.</p>
+                </div>
+
+                <button class="btn-primary-large" style="margin-top: 15px;" @click="enviarCorreo"><i class="fas fa-paper-plane"></i> Enviar Correo Institucional</button>
+              </div>
+
+              <!-- Listas de Bandejas de Correo (derecha) -->
+              <div class="mailboxes-container" style="flex: 1.8;">
+                <!-- Recibidos -->
+                <div class="panel-correo">
+                  <h4><i class="fas fa-inbox"></i> Correos Recibidos</h4>
+                  <div class="correos-lista-scroll" v-if="correosRecibidos.length">
+                    <div v-for="correo in correosRecibidos" :key="correo.id" class="correo-item-card">
+                      <div class="correo-card-header">
+                        <strong class="correo-asunto-txt">{{ correo.asunto }}</strong>
+                        <span class="correo-fecha-txt">{{ formatearFechaHora(correo.fecha) }}</span>
+                      </div>
+                      <div class="correo-card-meta">
+                        De: <span class="correo-user">{{ correo.remitenteNombre }}</span>
+                      </div>
+                      <p class="correo-mensaje-txt">{{ correo.mensaje }}</p>
+                      
+                      <!-- Si el correo tiene adjuntos -->
+                      <div class="correo-adjuntos-lista" v-if="correo.adjuntos && correo.adjuntos.length">
+                        <div v-for="adj in correo.adjuntos" :key="adj.archivoId" class="correo-adj-chip" @click="abrirArchivo(adj)">
+                          <i class="fas fa-paperclip"></i> <span>{{ adj.nombreOriginal }}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="vacio-container" v-else>
+                    <i class="fas fa-envelope empty-icon"></i>
+                    <p>No posee mensajes en su bandeja de entrada.</p>
+                  </div>
+                </div>
+
+                <!-- Enviados -->
+                <div class="panel-correo" style="margin-top: 15px;">
+                  <h4><i class="fas fa-paper-plane"></i> Correos Enviados</h4>
+                  <div class="correos-lista-scroll" v-if="correosEnviados.length">
+                    <div v-for="correo in correosEnviados" :key="correo.id" class="correo-item-card">
+                      <div class="correo-card-header">
+                        <strong class="correo-asunto-txt">{{ correo.asunto }}</strong>
+                        <span class="correo-fecha-txt">{{ formatearFechaHora(correo.fecha) }}</span>
+                      </div>
+                      <div class="correo-card-meta">
+                        Para: <span class="correo-user">{{ correo.destinatarioNombre }}</span>
+                      </div>
+                      <p class="correo-mensaje-txt">{{ correo.mensaje }}</p>
+                      
+                      <!-- Adjuntos del correo enviado -->
+                      <div class="correo-adjuntos-lista" v-if="correo.adjuntos && correo.adjuntos.length">
+                        <div v-for="adj in correo.adjuntos" :key="adj.archivoId" class="correo-adj-chip" @click="abrirArchivo(adj)">
+                          <i class="fas fa-paperclip"></i> <span>{{ adj.nombreOriginal }}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="vacio-container" v-else>
+                    <i class="fas fa-paper-plane empty-icon"></i>
+                    <p>No ha enviado correos aún.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+
+        <!-- 3. SECCION: GESTIÓN DE ARCHIVOS DIGITALES (ORGANIZADA POR PESTAÑAS) -->
+        <section id="archivos" class="seccion" v-show="vistaActual === 'archivos'">
+          
+          <!-- SUB-PESTAÑAS DE ARCHIVOS -->
+          <div class="sub-tabs-container">
+            <button class="sub-tab-btn" :class="{ activo: archivosTab === 'explorador' }" @click="archivosTab = 'explorador'">
+              <i class="fas fa-images"></i> Explorador de Archivos <span class="tab-badge">{{ archivosFiltrados.length }}</span>
+            </button>
+            <button class="sub-tab-btn" :class="{ activo: archivosTab === 'subir' }" @click="archivosTab = 'subir'">
+              <i class="fas fa-cloud-arrow-up"></i> Subir Archivo Digital
+            </button>
+            <button class="sub-tab-btn" :class="{ activo: archivosTab === 'registrar' }" @click="archivosTab = 'registrar'">
+              <i class="fas fa-signature"></i> Registrar Trámite Formal
+            </button>
+          </div>
+
+          <!-- PESTAÑA 1: EXPLORADOR DE ARCHIVOS (ESTILO GOOGLE DRIVE) -->
+          <div v-show="archivosTab === 'explorador'" class="tab-content-layout">
+            <div class="visualizacion-archivo">
+              <!-- Filtros de búsqueda estilo profesional -->
+              <div class="filtros-archivos-avanzados">
+                <div class="filtro-item-search">
+                  <i class="fas fa-magnifying-glass search-ico"></i>
+                  <input type="text" v-model="busquedaArchivos" placeholder="Buscar por título, etiquetas, comentarios o nombre original...">
+                </div>
+                
+                <div class="filtro-grid-dropdowns">
+                  <div class="select-wrapper">
+                    <label>Categoría</label>
+                    <select v-model="filtroCategoriaArchivo">
+                      <option value="todos">Cualquier Categoría</option>
+                      <option v-for="cat in categorias" :key="cat" :value="cat">{{ cat }}</option>
+                    </select>
+                  </div>
+
+                  <div class="select-wrapper">
+                    <label>Facultad</label>
+                    <select v-model="filtroFacultad">
+                      <option value="todos">Cualquier Facultad</option>
+                      <option v-for="fac in opcionesFacultad" :key="fac" :value="fac">{{ fac }}</option>
+                    </select>
+                  </div>
+
+                  <div class="select-wrapper">
+                    <label>Fecha de Subida</label>
+                    <input type="date" v-model="filtroFecha">
+                  </div>
+
+                  <div class="select-wrapper">
+                    <label>Estado</label>
+                    <select v-model="filtroEstadoArchivo">
+                      <option value="todos">Cualquier Estado</option>
+                      <option value="registrado">Solo Guardados</option>
+                      <option value="enviado">Solo Enviados</option>
+                    </select>
+                  </div>
+
+                  <div class="select-wrapper">
+                    <label>Ordenación</label>
+                    <select v-model="ordenArchivos">
+                      <option value="reciente">Más Reciente</option>
+                      <option value="antiguo">Más Antiguo</option>
+                      <option value="nombre">Por Nombre (A-Z)</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Vista de archivos en cuadrícula profesional -->
+              <div class="files-grid-view" v-if="archivosFiltrados.length">
+                <div v-for="archivo in archivosFiltrados" :key="archivo.id" class="file-card-item">
+                  <div class="file-card-top" @click="abrirArchivo(archivo)">
+                    <div class="file-card-icon-container">
+                      <i class="fas fa-file-lines big-file-icon" :class="obtenerIconoArchivo(archivo.extension)"></i>
+                    </div>
+                    <span class="file-size-badge">{{ formatearTamano(archivo.tamano) }}</span>
+                  </div>
+                  
+                  <div class="file-card-middle" @click="abrirArchivo(archivo)">
+                    <strong class="file-title-txt" :title="archivo.titulo">{{ archivo.titulo }}</strong>
+                    <span class="file-orig-name">{{ archivo.nombreOriginal }}</span>
+                    <span class="file-meta-cat">{{ archivo.categoria }} · {{ archivo.facultad }}</span>
+                    
+                    <p class="file-card-desc" v-if="archivo.comentario" :title="archivo.comentario">{{ archivo.comentario }}</p>
+                    
+                    <!-- Chips de etiquetas -->
+                    <div class="file-tags-chips" v-if="archivo.etiquetas">
+                      <span v-for="tag in archivo.etiquetas.split(',')" :key="tag" class="tag-chip">#{{ tag.trim() }}</span>
+                    </div>
+                  </div>
+                  
+                  <div class="file-card-bottom">
+                    <div class="file-uploader-info">
+                      <span class="file-uploader-name"><i class="fas fa-user-pen"></i> {{ archivo.propietarioNombre }}</span>
+                      <span class="file-upload-date">{{ formatearFecha(archivo.fecha) }}</span>
+                    </div>
+                    
+                    <div class="file-card-actions">
+                      <button class="file-action-btn view" @click="abrirArchivo(archivo)" title="Previsualizar archivo"><i class="fas fa-eye"></i></button>
+                      <button class="file-action-btn download" @click="descargarArchivo(archivo)" title="Descargar archivo"><i class="fas fa-download"></i></button>
+                      <button class="file-action-btn delete" v-if="sesion.rol === 'Administrador' || Number(archivo.propietarioId) === Number(sesion.id)" @click="eliminarArchivo(archivo)" title="Eliminar archivo"><i class="fas fa-trash-can"></i></button>
+                      <span class="status-badge-item" :class="archivo.estado">{{ archivo.estado === 'enviado' ? 'Enviado' : 'Registrado' }}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Estado Vacío -->
+              <div class="vacio-container" v-else>
+                <i class="fas fa-folder-open empty-icon"></i>
+                <p>No se encontraron archivos en la nube con los filtros ingresados.</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- PESTAÑA 2: FORMULARIO SUBIR ARCHIVO DIGITAL -->
+          <div v-show="archivosTab === 'subir'" class="tab-content-layout">
+            <div class="registro-documentos form-center-layout">
+              <h3><i class="fas fa-cloud-arrow-up text-red-500"></i> Subir Documento a la Nube</h3>
+              <p class="form-instructions">Seleccione un archivo de su computadora para digitalizarlo e indexarlo en el sistema.</p>
+              
+              <form @submit.prevent="subirArchivoDigital">
+                <!-- Dropzone Drag & Drop -->
+                <div class="upload-dropzone" @click="$refs.inputArchivo.click()" style="cursor: pointer;">
+                  <input ref="inputArchivo" type="file" @change="seleccionarArchivo" style="display: none;">
+                  <i class="fas fa-cloud-arrow-up upload-icon"></i>
+                  <p class="upload-text-main" v-if="!archivoSeleccionado">Arrastre su archivo aquí o haga clic para buscar</p>
+                  <div class="file-selected-details" v-else>
+                    <strong class="selected-name">{{ archivoSeleccionado.name }}</strong>
+                    <span class="selected-size">Size: {{ (archivoSeleccionado.size / 1024).toFixed(1) }} KB</span>
+                  </div>
+                </div>
+
+                <div class="form-grid-2">
+                  <div class="form-group">
+                    <label for="arc-titulo">Título del Documento:*</label>
+                    <input type="text" id="arc-titulo" v-model="nuevoArchivo.titulo" placeholder="Ej: Oficio Circular N° 10" required>
+                  </div>
+                  
+                  <div class="form-group">
+                    <label for="arc-tipo">Tipo / Clasificación:</label>
+                    <input type="text" id="arc-tipo" v-model="nuevoArchivo.tipoDocumento" placeholder="Ej: Oficio, Acta, Memorando...">
+                  </div>
+
+                  <div class="form-group">
+                    <label for="arc-cat">Categoría:*</label>
+                    <select id="arc-cat" v-model="nuevoArchivo.categoria" required>
+                      <option v-for="cat in categorias" :key="cat" :value="cat">{{ cat }}</option>
+                    </select>
+                  </div>
+
+                  <div class="form-group">
+                    <label for="arc-tag">Etiquetas (separadas por comas):</label>
+                    <input type="text" id="arc-tag" v-model="nuevoArchivo.etiquetas" placeholder="Ej: financiero, rectorado, urgente">
+                  </div>
+
+                  <div class="form-group">
+                    <label for="arc-fac">Facultad:*</label>
+                    <select id="arc-fac" v-model="nuevoArchivo.facultad" @change="nuevoArchivo.carrera = ''" required>
+                      <option value="">Seleccione Facultad...</option>
+                      <option v-for="fac in facultadesParaDelegacion" :key="fac" :value="fac">{{ fac }}</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label for="arc-car">Carrera:</label>
+                    <select id="arc-car" v-model="nuevoArchivo.carrera" :disabled="!nuevoArchivo.facultad">
+                      <option value="">Aplica a toda la facultad...</option>
+                      <option v-for="carr in obtenerCarreras(nuevoArchivo.facultad)" :key="carr" :value="carr">{{ carr }}</option>
+                    </select>
+                  </div>
+
+                  <div class="form-group">
+                    <label for="arc-fecha">Fecha del Documento:*</label>
+                    <input type="date" id="arc-fecha" v-model="nuevoArchivo.fecha" required>
+                  </div>
+                </div>
+
+                <div class="form-group">
+                  <label for="arc-dest">Enviar directamente a usuario (opcional):</label>
+                  <select id="arc-dest" v-model="nuevoArchivo.destinatarioId">
+                    <option value="">No enviar / Solo archivar en mi nube</option>
+                    <option v-for="usr in usuariosParaEnvio" :key="usr.id" :value="usr.id">{{ usr.nombre }} ({{ usr.facultad }})</option>
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label for="arc-com">Comentario / Resumen:</label>
+                  <input type="text" id="arc-com" v-model="nuevoArchivo.comentario" placeholder="Breve resumen del contenido del documento...">
+                </div>
+
+                <div class="form-actions-inline">
+                  <button type="submit" class="btn-primary-large"><i class="fas fa-cloud-arrow-up"></i> Registrar y Subir Archivo</button>
+                  <button type="button" class="btn-cancel" @click="archivosTab = 'explorador'">Cancelar</button>
+                </div>
+              </form>
+            </div>
+          </div>
+
+          <!-- PESTAÑA 3: REGISTRAR TRÁMITE FORMAL (TICKET) -->
+          <div v-show="archivosTab === 'registrar'" class="tab-content-layout">
+            <div class="registro-documentos form-center-layout">
+              <h3><i class="fas fa-signature text-red-500"></i> Registrar Nuevo Trámite Formal</h3>
+              <p class="form-instructions">Cree una boleta de trámite oficial. Se generará una alerta de firma inmediata en la bandeja de entrada.</p>
+              
+              <form @submit.prevent="agregarDocumento">
+                <div class="form-grid-2">
+                  <div class="form-group">
+                    <label for="doc-cat">Categoría:*</label>
+                    <select id="doc-cat" v-model="nuevoDocumento.categoria" required>
+                      <option value="" disabled selected>Seleccione...</option>
+                      <option v-for="cat in categorias" :key="cat" :value="cat">{{ cat }}</option>
+                    </select>
+                  </div>
+                  
+                  <div class="form-group">
+                    <label for="doc-prio">Prioridad de Despacho:</label>
+                    <select id="doc-prio" v-model="nuevoDocumento.prioridad">
+                      <option value="alta">Alta (Atención hoy)</option>
+                      <option value="media">Media (Atención regular)</option>
+                      <option value="baja">Baja (Atención flexible)</option>
+                    </select>
+                  </div>
+
+                  <div class="form-group">
+                    <label for="doc-ticket">Número de Ticket / Oficio:*</label>
+                    <input type="text" id="doc-ticket" v-model="nuevoDocumento.ticket" placeholder="Ej: ULEAM-SG-2026-0034" required>
+                  </div>
+
+                  <div class="form-group">
+                    <label for="doc-rem">Nombre del Remitente:*</label>
+                    <input type="text" id="doc-rem" v-model="nuevoDocumento.remitente" placeholder="Ej: Ing. Juan Pérez" required>
+                  </div>
+                </div>
+
+                <div class="form-group">
+                  <label for="doc-fac">Facultad / Unidad Remitente:*</label>
+                  <select id="doc-fac" v-model="nuevoDocumento.facultad" @change="nuevoDocumento.carrera = ''" required>
+                    <option value="">Seleccione Facultad...</option>
+                    <option v-for="fac in facultadesParaDelegacion" :key="fac" :value="fac">{{ fac }}</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="doc-car">Carrera:</label>
+                  <select id="doc-car" v-model="nuevoDocumento.carrera" :disabled="!nuevoDocumento.facultad">
+                    <option value="">Aplica a toda la facultad...</option>
+                    <option v-for="carr in obtenerCarreras(nuevoDocumento.facultad)" :key="carr" :value="carr">{{ carr }}</option>
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label for="doc-dest"><i class="fas fa-paper-plane"></i> Para (Destinatario):*</label>
+                  <select id="doc-dest" v-model="nuevoDocumento.destinatarioId" required>
+                    <option value="">— Seleccione el destinatario del trámite —</option>
+                    <optgroup v-for="fac in facultadesParaDelegacion" :key="fac" :label="fac">
+                      <option v-for="usr in usuarios.filter(u => u.facultad === fac && u.id != sesion.id)" :key="usr.id" :value="usr.id">
+                        {{ usr.nombre }} · {{ usr.carrera || 'Sin Carrera' }}
+                      </option>
+                    </optgroup>
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label for="doc-asunto">Asunto Breve / Descripción:*</label>
+                  <input type="text" id="doc-asunto" v-model="nuevoDocumento.asunto" placeholder="Ej: Solicitud de apertura de cohorte Maestría Software" required>
+                </div>
+
+                <div class="form-actions-inline">
+                  <button type="submit" class="btn-primary-large"><i class="fas fa-pen-nib"></i> Registrar e Indexar Trámite</button>
+                  <button type="button" class="btn-cancel" @click="archivosTab = 'explorador'">Cancelar</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </section>
+
+
+        <!-- 4. SECCION: REPORTES ESTADÍSTICOS (CONECTADO AL SISTEMA) -->
+        <section id="reportes" class="seccion" v-show="vistaActual === 'reportes'">
+          
+          <!-- FICHAS MÉTRICAS GENERALES -->
+          <div class="stats-top-row">
+            <div class="metric-card">
+              <div class="metric-icon blue"><i class="fas fa-file-invoice"></i></div>
+              <div class="metric-data">
+                <span class="metric-title">Trámites Totales</span>
+                <strong class="metric-num">{{ resumenGeneral.total }}</strong>
+              </div>
+            </div>
+            
+            <div class="metric-card">
+              <div class="metric-icon green"><i class="fas fa-file-circle-check"></i></div>
+              <div class="metric-data">
+                <span class="metric-title">Atendidos (Firmas/Negados)</span>
+                <strong class="metric-num">{{ resumenGeneral.atendidos }}</strong>
+              </div>
+            </div>
+
+            <div class="metric-card">
+              <div class="metric-icon orange"><i class="fas fa-hourglass-half"></i></div>
+              <div class="metric-data">
+                <span class="metric-title">Pendientes en Cola</span>
+                <strong class="metric-num">{{ resumenGeneral.enProceso }}</strong>
+              </div>
+            </div>
+
+            <div class="metric-card">
+              <div class="metric-icon purple"><i class="fas fa-cloud"></i></div>
+              <div class="metric-data">
+                <span class="metric-title">Archivos Digitales</span>
+                <strong class="metric-num">{{ resumenGeneral.totalDigitales }}</strong>
+              </div>
+            </div>
+
+            <div class="metric-card">
+              <div class="metric-icon pink"><i class="fas fa-envelope"></i></div>
+              <div class="metric-data">
+                <span class="metric-title">Correos Enviados</span>
+                <strong class="metric-num">{{ resumenGeneral.totalMails }}</strong>
+              </div>
+            </div>
+          </div>
+
+          <!-- GRÁFICOS DETALLADOS -->
+          <div class="reportes-layout" style="margin-top: 25px;">
+            <div class="panel-card" style="flex: 2;">
+              <div class="panel-header">
+                <h4><i class="fas fa-chart-column"></i> Eficiencia de Firma por Categoría de Documento</h4>
+              </div>
+              <div class="panel-body">
+                <div class="canvas-container" style="height: 320px;">
+                  <canvas ref="graficoBarras"></canvas>
+                </div>
+              </div>
+            </div>
+            
+            <div class="panel-card" style="flex: 1.2;">
+              <div class="panel-header" style="text-align: center;">
+                <h4><i class="fas fa-chart-pie"></i> Proporción de Resoluciones</h4>
+              </div>
+              <div class="panel-body">
+                <div class="pie-chart-wrapper" style="position: relative; height: 260px; max-width: 260px; margin: 0 auto;">
+                  <canvas ref="graficoPie"></canvas>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+
+        <!-- 5. SECCION: AJUSTES (CON REGISTRO DE AUDITORÍA) -->
+        <section id="ajustes" class="seccion" v-show="vistaActual === 'ajustes'">
+          <div class="config-layout">
+            <div class="panel-card">
+              <h3><i class="fas fa-folder-open text-red-500"></i> Plantillas Oficiales</h3>
+              <p>Formatos y plantillas de la Secretaría General de la ULEAM.</p>
+              <div class="plantillas-list" style="margin-top: 15px;">
+                <div class="plantilla-item">
+                  <span>Oficio Técnico Institucional Uleam.docx</span>
+                  <button class="btn-action-view"><i class="fas fa-download"></i></button>
+                </div>
+                <div class="plantilla-item" style="margin-top: 8px;">
+                  <span>Formato de Solicitud de Egreso.docx</span>
+                  <button class="btn-action-view"><i class="fas fa-download"></i></button>
+                </div>
+              </div>
+            </div>
+            
+            <div class="panel-card">
+              <h3><i class="fas fa-shield-halved text-green-500"></i> Firma Criptográfica</h3>
+              <p>Tokens y estado del firmador criptográfico central.</p>
+              <div class="token-status" style="margin-top: 15px; padding: 12px; background: var(--bg-main); border-radius: 6px; font-size: 13px;">
+                <div><i class="fas fa-circle-check text-green-500"></i> Conexión con Entidad Certificadora: <strong>OK</strong></div>
+                <div style="margin-top: 8px;"><i class="fas fa-key text-blue-500"></i> Token SHA256: <strong>Activo y Renovado</strong></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- PANEL EXCLUSIVO DEL ADMINISTRADOR (GESTIÓN DE USUARIOS Y AUDITORÍA) -->
+          <div id="panel-admin-usuarios" v-if="sesion.rol === 'Administrador'" style="margin-top: 25px;">
+            <div class="admin-panel-tabs">
+              <h3 style="color: var(--primary-color);"><i class="fas fa-user-gear"></i> Consola Administrativa (Solo Administrador)</h3>
+            </div>
+            
+            <div class="admin-grid-layout" style="display: flex; gap: 20px; margin-top: 15px;">
+              <!-- Formulario de creación de usuario -->
+              <form @submit.prevent="agregarUsuario" class="admin-form-user" style="flex: 1; background: var(--bg-main); padding: 20px; border-radius: 8px; border: 1px solid var(--border-color);">
+                <h4>Crear Nuevo Usuario Institucional</h4>
+                
+                <div class="form-group">
+                  <label for="reg-nombre">Nombre Completo:</label>
+                  <input type="text" id="reg-nombre" v-model="nuevoUsuario.nombre" placeholder="Ej: Dr. Alfonso Macías" required>
+                </div>
+
+                <div class="form-group">
+                  <label for="reg-email">Correo Electrónico:</label>
+                  <input type="email" id="reg-email" v-model="nuevoUsuario.email" :placeholder="generarUsuarioAutomatico(nuevoUsuario.nombre)" style="margin-bottom: 5px;">
+                  <span class="input-helper-txt">Si se deja en blanco se generará automáticamente.</span>
+                </div>
+
+                <div class="form-group">
+                  <label for="reg-facultad">Facultad Asignada:</label>
+                  <select id="reg-facultad" v-model="nuevoUsuario.facultad" required @change="nuevoUsuario.carrera = ''">
+                    <option value="">Seleccione Facultad...</option>
+                    <option v-for="fac in facultadesParaDelegacion" :key="fac" :value="fac">{{ fac }}</option>
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label for="reg-carrera">Carrera Asignada:</label>
+                  <select id="reg-carrera" v-model="nuevoUsuario.carrera" :disabled="!nuevoUsuario.facultad" required>
+                    <option value="">Seleccione Carrera...</option>
+                    <option v-for="carr in obtenerCarreras(nuevoUsuario.facultad)" :key="carr" :value="carr">{{ carr }}</option>
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label for="reg-clave">Contraseña de Acceso:</label>
+                  <input type="text" id="reg-clave" v-model="nuevoUsuario.clave" placeholder="Ej: 1234" required>
+                </div>
+
+                <div class="form-group">
+                  <label for="reg-rol">Rol de Sistema:</label>
+                  <select id="reg-rol" v-model="nuevoUsuario.rol" required>
+                    <option value="" disabled selected>Seleccione Rol...</option>
+                    <option value="Usuario">Usuario Estándar</option>
+                    <option value="Administrador">Administrador de Sistema</option>
+                  </select>
+                </div>
+
+                <button type="submit" class="btn-primary-large" style="background-color: #10b981;"><i class="fas fa-user-plus"></i> Registrar Usuario</button>
+              </form>
+
+              <!-- Listado de usuarios del sistema -->
+              <div class="admin-users-list" style="flex: 2;">
+                <h4>Usuarios Activos en la Plataforma</h4>
+                <div class="search-users-bar" style="display: flex; gap: 10px; margin-bottom: 12px;">
+                  <input type="text" v-model="busquedaUsuario" placeholder="Buscar usuario por nombre o login..." style="margin-bottom: 0; flex: 1;">
+                  <select v-model="filtroEstado" style="width: 140px; margin-bottom: 0;">
+                    <option value="todos">Todos los Estados</option>
+                    <option value="activo">Solo Activos</option>
+                    <option value="desactivado">Solo Inactivos</option>
+                  </select>
+                </div>
+                
+                <div class="tabla-contenedor scroll-table">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Login / Correo</th>
+                        <th>Nombre</th>
+                        <th>Facultad</th>
+                        <th>Rol</th>
+                        <th>Estado</th>
+                        <th>Acciones</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr v-for="u in usuariosFiltrados" :key="u.id">
+                        <td>
+                          <div style="font-weight: bold;">{{ u.usuario }}</div>
+                          <div style="font-size: 11px; color: #64748b;">{{ u.email }}</div>
+                        </td>
+                        <td>{{ u.nombre }}</td>
+                        <td>{{ u.facultad }} <span v-if="u.carrera" style="font-size: 12px; color: #64748b;"><br>{{ u.carrera }}</span></td>
+                        <td><span class="badge-rol" :class="u.rol.toLowerCase()">{{ u.rol === 'Administrador' ? 'Admin' : 'Usuario' }}</span></td>
+                        <td>
+                          <span class="badge-estado" :style="{ background: u.estado === 'activo' ? '#10b981' : '#64748b', color: 'white' }">
+                            {{ u.estado === 'activo' ? 'Activo' : 'Inactivo' }}
+                          </span>
+                        </td>
+                        <td>
+                          <div style="display: flex; gap: 4px;">
+                            <button v-if="u.bloqueado" disabled class="btn-action-table ban"><i class="fas fa-lock"></i></button>
+                            <button v-else @click="alternarEstado(u)" class="btn-action-table toggle" :title="u.estado === 'activo' ? 'Desactivar' : 'Activar'">
+                              <i class="fas" :class="u.estado === 'activo' ? 'fa-user-slash' : 'fa-user-check'"></i>
+                            </button>
+                            <button v-if="!u.bloqueado" @click="eliminarUsuario(u)" class="btn-action-table delete" title="Eliminar"><i class="fas fa-trash"></i></button>
+                          </div>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            <!-- REGISTRO DE AUDITORÍA GENERAL -->
+            <div class="panel-card" style="margin-top: 20px;">
+              <div class="panel-header">
+                <h4><i class="fas fa-list-check"></i> Bitácora de Auditoría del Sistema</h4>
+                <p>Historial en tiempo real de operaciones de los usuarios (Logins, firmas, creación y eliminación de archivos)</p>
+              </div>
+              <div class="panel-body">
+                <div class="tabla-contenedor scroll-table" style="max-height: 250px;">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Fecha y Hora</th>
+                        <th>Usuario</th>
+                        <th>Acción</th>
+                        <th>Detalles / Operación</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr v-for="log in logsAuditoria" :key="log.id">
+                        <td style="font-size: 12px; font-family: monospace;">{{ formatearFechaHora(log.fecha) }}</td>
+                        <td><strong>{{ log.usuario }}</strong></td>
+                        <td><span class="audit-action-badge">{{ log.accion }}</span></td>
+                        <td style="font-size: 13px;">{{ log.detalles }}</td>
+                      </tr>
+                      <tr v-if="logsAuditoria.length === 0" class="fila-vacia">
+                        <td colspan="4">No hay registros de auditoría en la base de datos.</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+
+        <!-- 6. SECCION: CENTRO DE AYUDA -->
+        <section id="ayuda" class="seccion" v-show="vistaActual === 'ayuda'">
+          <div class="ayuda-layout">
+            <div class="panel-card">
+              <h3><i class="fas fa-circle-question text-blue-500"></i> Preguntas Frecuentes</h3>
+              <p>Consulte las respuestas a dudas recurrentes de uso de la plataforma.</p>
+              <div class="faq-container" style="margin-top: 15px;">
+                <details class="faq-item">
+                  <summary>¿Cómo subo un documento digital y lo envío a un destinatario?</summary>
+                  <p>Diríjase a la pestaña "Archivos", seleccione "Subir Archivo Digital". Complete los campos y en "Enviar directamente a usuario", seleccione a la persona destino antes de presionar subir.</p>
+                </details>
+                <details class="faq-item" style="margin-top: 8px;">
+                  <summary>¿Qué significa el estado de prioridad en bandeja?</summary>
+                  <p>La prioridad (Alta, Media, Baja) indica la urgencia de atención que el remitente solicita para la firma o resolución del oficio.</p>
+                </details>
+              </div>
+            </div>
+            
+            <div class="panel-card">
+              <h3><i class="fas fa-headset text-orange-500"></i> Mesa de Ayuda Técnica</h3>
+              <p>Reporte errores en el funcionamiento de la plataforma o solicite soporte directo al administrador.</p>
+              
+              <button class="btn-primary-large" style="margin-top: 10px;" @click="mostrarFormularioSoporte = !mostrarFormularioSoporte">
+                <i class="fas fa-circle-exclamation"></i> Registrar Ticket de Soporte
+              </button>
+
+              <div v-if="mostrarFormularioSoporte" class="soporte-form-inner" style="margin-top: 15px; padding: 15px; background: var(--bg-main); border-radius: 8px;">
+                <div class="form-group">
+                  <label for="sop-as">Asunto del Problema:</label>
+                  <input type="text" id="sop-as" v-model="nuevoTicketSoporte.asunto" placeholder="Ej: No visualizo archivos adjuntos de correos">
+                </div>
+                <div class="form-group">
+                  <label for="sop-desc">Descripción del Inconveniente:</label>
+                  <textarea id="sop-desc" v-model="nuevoTicketSoporte.descripcion" placeholder="Describa a detalle el error..."></textarea>
+                </div>
+                <div class="form-group">
+                  <label for="sop-prio">Prioridad del Error:</label>
+                  <select id="sop-prio" v-model="nuevoTicketSoporte.prioridad">
+                    <option value="baja">Baja</option>
+                    <option value="media">Media</option>
+                    <option value="alta">Alta</option>
+                  </select>
+                </div>
+                <button class="btn-submit-delegar" @click="enviarSolicitudSoporte"><i class="fas fa-paper-plane"></i> Enviar Solicitud</button>
+              </div>
+
+              <!-- Lista de tickets de soporte -->
+              <div class="soporte-tickets-list" style="margin-top: 20px;" v-if="soporteTickets.length">
+                <h5>Sus Solicitudes de Soporte</h5>
+                <ul class="soporte-ul">
+                  <li v-for="ticket in soporteTickets" :key="ticket.id" class="soporte-li-item">
+                    <div>
+                      <strong>#{{ ticket.id }} · {{ ticket.asunto }}</strong>
+                      <div style="font-size: 11px; color:#64748b;">Enviado por: {{ ticket.usuarioNombre }} · Prioridad: {{ ticket.prioridad }}</div>
+                    </div>
+                    <div style="display: flex; gap: 5px; align-items: center;">
+                      <span class="badge-status-pill" :class="ticket.estado">{{ ticket.estado.toUpperCase() }}</span>
+                      <button v-if="sesion.rol === 'Administrador' && ticket.estado !== 'atendido'" class="btn-action-view" @click="marcarTicketAtendido(ticket)">Resolver</button>
+                    </div>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </section>
+
+
+        <!-- 7. SECCION NUEVA: PERFIL DEL USUARIO -->
+        <section id="perfil" class="seccion" v-show="vistaActual === 'perfil'">
+          <div class="perfil-layout-grid">
+            <!-- Columna Izquierda: Tarjeta de Avatar -->
+            <div class="panel-card avatar-edit-card" style="text-align: center;">
+              <h4>Foto de Perfil</h4>
+              
+              <div class="avatar-uploader-circle">
+                <!-- Previsualización local antes de subir, si existe -->
+                <img v-if="avatarPrevisualizacion" :src="avatarPrevisualizacion" class="avatar-edit-img" alt="Avatar">
+                <!-- Foto guardada actual -->
+                <img v-else-if="sesion.fotoPerfil" :src="sesion.fotoPerfil" class="avatar-edit-img" alt="Avatar">
+                <!-- Iniciales por defecto -->
+                <div v-else class="avatar-edit-initials">{{ sesion.usuario.charAt(0) }}</div>
+              </div>
+
+              <div class="avatar-actions">
+                <button class="btn-file-select" @click="abrirSubirAvatar"><i class="fas fa-camera"></i> Subir Foto</button>
+                <input ref="avatarInputFile" type="file" @change="cambiarAvatarSeleccionado" style="display: none;" accept="image/*">
+                <p class="avatar-tip">Formatos aceptados: PNG, JPG, GIF. Peso máx: 2MB.</p>
+              </div>
+
+              <hr class="divider">
+
+              <div class="perfil-institutional-details">
+                <div class="inst-info-row">
+                  <span class="inst-label">Usuario:</span>
+                  <strong class="inst-val">{{ sesion.usuario }}</strong>
+                </div>
+                <div class="inst-info-row">
+                  <span class="inst-label">Correo:</span>
+                  <strong class="inst-val">{{ sesion.email }}</strong>
+                </div>
+                <div class="inst-info-row">
+                  <span class="inst-label">Facultad:</span>
+                  <strong class="inst-val">{{ sesion.facultad }}</strong>
+                </div>
+                <div class="inst-info-row">
+                  <span class="inst-label">Carrera:</span>
+                  <strong class="inst-val">{{ sesion.carrera || 'N/A' }}</strong>
+                </div>
+                <div class="inst-info-row">
+                  <span class="inst-label">Rol Asignado:</span>
+                  <strong class="inst-val text-red-600">{{ sesion.rol }}</strong>
+                </div>
+              </div>
+            </div>
+
+            <!-- Columna Derecha: Formulario de datos -->
+            <div class="panel-card profile-details-form">
+              <h4>Editar Información Personal</h4>
+              
+              <form @submit.prevent="guardarPerfil">
+                <div class="form-group">
+                  <label for="prof-nombre">Nombre Completo:*</label>
+                  <input type="text" id="prof-nombre" v-model="perfilForm.nombre" required>
+                </div>
+
+                <div class="form-group">
+                  <label for="prof-email">Correo Electrónico:*</label>
+                  <input type="email" id="prof-email" v-model="perfilForm.email" required>
+                </div>
+
+                <fieldset class="password-fieldset">
+                  <legend><i class="fas fa-key"></i> Cambiar Contraseña (Opcional)</legend>
+                  
+                  <div class="form-group">
+                    <label for="prof-pass">Nueva Contraseña:</label>
+                    <input type="password" id="prof-pass" v-model="perfilForm.passwordNueva" placeholder="Escriba la nueva contraseña si desea cambiarla...">
+                  </div>
+
+                  <div class="form-group">
+                    <label for="prof-pass-conf">Confirmar Nueva Contraseña:</label>
+                    <input type="password" id="prof-pass-conf" v-model="perfilForm.passwordConfirmar" placeholder="Confirme la contraseña...">
+                  </div>
+                </fieldset>
+
+                <button type="submit" :disabled="cargandoPerfil" class="btn-primary-large" style="margin-top: 20px;">
+                  <span v-if="cargandoPerfil"><i class="fas fa-spinner fa-spin"></i> Guardando cambios...</span>
+                  <span v-else><i class="fas fa-floppy-disk"></i> Guardar Cambios del Perfil</span>
+                </button>
+              </form>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <!-- MODAL PREVISUALIZADOR DE DOCUMENTOS (INCORPORADO) -->
+    <div class="visor-modal-backdrop" v-if="visorActivo">
+      <div class="visor-modal-container">
+        <div class="visor-modal-header">
+          <div class="visor-modal-title">
+            <i class="fas mr-2" :class="obtenerIconoArchivo(visorArchivo.extension)"></i>
+            <strong>{{ visorArchivo.titulo }}</strong>
+            <span class="visor-orig-name-label">({{ visorArchivo.nombreOriginal }})</span>
+          </div>
+          <button class="btn-visor-close" @click="visorActivo = false"><i class="fas fa-xmark"></i></button>
+        </div>
+        <div class="visor-modal-body">
+          <!-- Si es imagen -->
+          <img v-if="['png','jpg','jpeg','gif'].includes(String(visorArchivo.extension).toLowerCase())" :src="visorArchivo.ruta" class="visor-content-img" alt="Previsualización">
+          <!-- Si es PDF, HTML, CSS, TXT -->
+          <iframe v-else-if="['pdf','html','css','txt','json','js'].includes(String(visorArchivo.extension).toLowerCase())" :src="visorArchivo.ruta" class="visor-content-iframe"></iframe>
+          <!-- Cualquier otro tipo de archivo no soportado para previsualización directa -->
+          <div v-else class="visor-unsupported">
+            <i class="fas fa-circle-exclamation big-warning-ico"></i>
+            <p>Este formato de archivo (.{{ visorArchivo.extension }}) no posee previsualización en el navegador.</p>
+            <button class="btn-primary-large" @click="descargarArchivo(visorArchivo)"><i class="fas fa-download"></i> Descargar Archivo</button>
+          </div>
+        </div>
+        <div class="visor-modal-footer">
+          <button class="btn-secondary" @click="visorActivo = false">Cerrar</button>
+          <button class="btn-primary" @click="descargarArchivo(visorArchivo)"><i class="fas fa-download"></i> Descargar</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Frameworks y Librerías -->
+  <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  
+  <!-- Archivos Separados de Frontend -->
+  <script src="/js/utils.js"></script>
+  <script src="/js/api.js"></script>
+  <script src="/app.js"></script>
+</body>
+</html>

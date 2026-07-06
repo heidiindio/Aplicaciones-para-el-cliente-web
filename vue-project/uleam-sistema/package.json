@@ -1,0 +1,10 @@
+{
+  "name": "uleam-gestion-documental",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Sistema de Gestión Documental ULEAM - Vue 3 + Node.js + JSON como base de datos",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  }
+}

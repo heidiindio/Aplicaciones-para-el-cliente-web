@@ -1,0 +1,81 @@
+[
+  {
+    "id": 1,
+    "ticket": "ULEAM-SG-2026-0456",
+    "categoria": "Documentación",
+    "prioridad": "alta",
+    "remitente": "Secretaría Médica",
+    "facultad": "Facultad de Ciencias Médicas",
+    "asunto": "Solicitud urgente de revisión técnica de laboratorios.",
+    "fecha": "2026-05-20",
+    "estado": "en_proceso",
+    "fechaFirma": "2026-07-04",
+    "accion": "delegado",
+    "usuario": "admin",
+    "usuarioDestino": 2,
+    "historial": [
+      {
+        "fecha": "2026-07-05T01:28:16.691Z",
+        "accion": "delegado",
+        "usuario": "admin"
+      }
+    ]
+  },
+  {
+    "id": 2,
+    "ticket": "CIRCULAR-SG-2026-0155",
+    "categoria": "Correspondencia",
+    "prioridad": "media",
+    "remitente": "Dpto. Compras",
+    "facultad": "Departamento de Compras",
+    "asunto": "Cuadro comparativo y proformas de equipos tecnológicos.",
+    "fecha": "2026-05-21",
+    "estado": "en_proceso",
+    "fechaFirma": null
+  },
+  {
+    "id": 3,
+    "ticket": "ULEAM-SG-2026-0457",
+    "categoria": "Admisión",
+    "prioridad": "baja",
+    "remitente": "Fac. Ciencias Médicas",
+    "facultad": "Facultad de Ciencias Médicas",
+    "asunto": "Emisión de título para expediente de egresado.",
+    "fecha": "2026-05-22",
+    "estado": "en_proceso",
+    "fechaFirma": "2026-07-05",
+    "accion": "delegado",
+    "comentario": "",
+    "usuario": "Administrador General",
+    "historial": [
+      {
+        "fecha": "2026-07-05T00:43:18.829Z",
+        "accion": "firmado",
+        "usuario": "Administrador General"
+      },
+      {
+        "fecha": "2026-07-05T00:57:15.384Z",
+        "accion": "delegado",
+        "usuario": "Administrador General"
+      },
+      {
+        "fecha": "2026-07-05T00:57:31.062Z",
+        "accion": "delegado",
+        "usuario": "Administrador General"
+      }
+    ],
+    "resultado": "firmado"
+  },
+  {
+    "id": 4,
+    "ticket": "ULEAM-SG-2026-0400",
+    "categoria": "Internos",
+    "prioridad": "media",
+    "remitente": "Rectorado",
+    "facultad": "Rectorado",
+    "asunto": "Circular interna de procesos administrativos.",
+    "fecha": "2026-05-19",
+    "estado": "archivado",
+    "fechaFirma": "2026-05-20"
+  }
+]
