@@ -1,0 +1,128 @@
+[
+  {
+    "id": 1,
+    "fecha": "2026-07-06T01:25:58.340Z",
+    "usuario": "Dr. Carlos Delgado",
+    "accion": "Solicitud de Recuperación",
+    "detalles": "Código generado para recuperar contraseña."
+  },
+  {
+    "id": 2,
+    "fecha": "2026-07-06T01:29:31.406Z",
+    "usuario": "Secretaria General OM",
+    "accion": "Inicio de Sesión",
+    "detalles": "Sesión iniciada desde la IP o Web."
+  },
+  {
+    "id": 3,
+    "fecha": "2026-07-06T01:30:53.736Z",
+    "usuario": "Dra. Ana Mendoza",
+    "accion": "Solicitud de Recuperación",
+    "detalles": "Código generado para recuperar contraseña."
+  },
+  {
+    "id": 4,
+    "fecha": "2026-07-06T01:32:09.653Z",
+    "usuario": "Dra. Ana Mendoza",
+    "accion": "Recuperación Confirmada",
+    "detalles": "Contraseña restablecida correctamente."
+  },
+  {
+    "id": 5,
+    "fecha": "2026-07-06T01:42:42.228Z",
+    "usuario": "Secretaria General OM",
+    "accion": "Inicio de Sesión",
+    "detalles": "Sesión iniciada desde la IP o Web."
+  },
+  {
+    "id": 6,
+    "fecha": "2026-07-06T01:59:29.316Z",
+    "usuario": "Secretaria General OM",
+    "accion": "Inicio de Sesión",
+    "detalles": "Sesión iniciada desde la IP o Web."
+  },
+  {
+    "id": 7,
+    "fecha": "2026-07-06T01:59:39.120Z",
+    "usuario": "Dra. Ana Mendoza",
+    "accion": "Inicio de Sesión",
+    "detalles": "Sesión iniciada desde la IP o Web."
+  },
+  {
+    "id": 8,
+    "fecha": "2026-07-06T02:23:22.119Z",
+    "usuario": "Dra. Ana Mendoza",
+    "accion": "Inicio de Sesión",
+    "detalles": "Sesión iniciada desde la IP o Web."
+  },
+  {
+    "id": 9,
+    "fecha": "2026-07-06T02:57:12.134Z",
+    "usuario": "admin",
+    "accion": "Archivo Subido",
+    "detalles": "Subió el archivo test_photo.jpg (JPG, 2048.0 KB)"
+  },
+  {
+    "id": 10,
+    "fecha": "2026-07-06T03:02:04.271Z",
+    "usuario": "admin",
+    "accion": "Archivo Subido",
+    "detalles": "Subió el archivo test_10mb.txt (TXT, 10240.0 KB)"
+  },
+  {
+    "id": 11,
+    "fecha": "2026-07-06T03:17:37.830Z",
+    "usuario": "Dra. Ana Mendoza",
+    "accion": "Archivo Subido",
+    "detalles": "Subió el archivo Captura de pantalla 2026-05-29 230712.png (PNG, 207.4 KB)"
+  },
+  {
+    "id": 12,
+    "fecha": "2026-07-06T03:24:04.403Z",
+    "usuario": "Dra. Ana Mendoza",
+    "accion": "Inicio de Sesión",
+    "detalles": "Sesión iniciada desde la IP o Web."
+  },
+  {
+    "id": 13,
+    "fecha": "2026-07-06T03:24:41.682Z",
+    "usuario": "Dra. Ana Mendoza",
+    "accion": "Inicio de Sesión",
+    "detalles": "Sesión iniciada desde la IP o Web."
+  },
+  {
+    "id": 14,
+    "fecha": "2026-07-06T03:25:12.302Z",
+    "usuario": "Secretaria General OM",
+    "accion": "Inicio de Sesión",
+    "detalles": "Sesión iniciada desde la IP o Web."
+  },
+  {
+    "id": 15,
+    "fecha": "2026-07-06T03:25:39.343Z",
+    "usuario": "Dr. Carlos Delgado",
+    "accion": "Inicio de Sesión",
+    "detalles": "Sesión iniciada desde la IP o Web."
+  },
+  {
+    "id": 16,
+    "fecha": "2026-07-06T03:27:16.927Z",
+    "usuario": "Ing. Marcos Vera",
+    "accion": "Inicio de Sesión",
+    "detalles": "Sesión iniciada desde la IP o Web."
+  },
+  {
+    "id": 17,
+    "fecha": "2026-07-06T03:44:16.670Z",
+    "usuario": "Dra. Ana Mendoza",
+    "accion": "Inicio de Sesión",
+    "detalles": "Sesión iniciada desde la IP o Web."
+  },
+  {
+    "id": 18,
+    "fecha": "2026-07-06T03:50:23.389Z",
+    "usuario": "Docente Medicina",
+    "accion": "Inicio de Sesión",
+    "detalles": "Sesión iniciada desde la IP o Web."
+  }
+]
