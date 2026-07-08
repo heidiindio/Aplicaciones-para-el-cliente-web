@@ -124,5 +124,19 @@
     "usuario": "Docente Medicina",
     "accion": "Inicio de Sesión",
     "detalles": "Sesión iniciada desde la IP o Web."
+  },
+  {
+    "id": 19,
+    "fecha": "2026-07-06T07:03:14.707Z",
+    "usuario": "Dra. Ana Mendoza",
+    "accion": "Inicio de Sesión",
+    "detalles": "Sesión iniciada desde la IP o Web."
+  },
+  {
+    "id": 20,
+    "fecha": "2026-07-06T08:37:53.434Z",
+    "usuario": "Dra. Ana Mendoza",
+    "accion": "Inicio de Sesión",
+    "detalles": "Sesión iniciada desde la IP o Web."
   }
 ]

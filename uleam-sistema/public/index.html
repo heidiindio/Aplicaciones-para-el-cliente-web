@@ -202,6 +202,12 @@
               <a href="#" @click.prevent="cambiarVista(item.id)">
                 <i class="fas" :class="item.icono"></i>
                 <span>{{ item.texto }}</span>
+                <!-- Badge de notificación solo en Mi Bandeja -->
+                <span
+                  v-if="item.id === 'bandeja' && conteoCorreosNuevos > 0"
+                  class="sidebar-notif-badge"
+                  :title="conteoCorreosNuevos + ' mensaje(s) nuevo(s)'"
+                >{{ conteoCorreosNuevos }}</span>
               </a>
             </li>
           </ul>
@@ -333,8 +339,12 @@
             <button class="sub-tab-btn" :class="{ activo: bandejaTab === 'historial' }" @click="bandejaTab = 'historial'">
               <i class="fas fa-clock-rotate-left"></i> Historial de Firmas / Negados
             </button>
-            <button class="sub-tab-btn" :class="{ activo: bandejaTab === 'correo' }" @click="bandejaTab = 'correo'">
+            <button class="sub-tab-btn" :class="{ activo: bandejaTab === 'correo' }" @click="bandejaTab = 'correo'; marcarCorreosVistos()">
               <i class="fas fa-paper-plane"></i> Mensajería Interna
+              <span class="tab-badge tab-badge-alert" v-if="conteoCorreosNuevos > 0">{{ conteoCorreosNuevos }}</span>
+            </button>
+            <button class="sub-tab-btn" :class="{ activo: bandejaTab === 'tramite' }" @click="bandejaTab = 'tramite'">
+              <i class="fas fa-signature"></i> Registrar Trámite
             </button>
           </div>
 
@@ -631,6 +641,81 @@
               </div>
             </div>
           </div>
+          <!-- PESTAÑA D: REGISTRAR TRÁMITE FORMAL (movida desde Archivos) -->
+          <div v-show="bandejaTab === 'tramite'" class="tab-content-layout">
+            <div class="registro-documentos form-center-layout">
+              <h3><i class="fas fa-signature text-red-500"></i> Registrar Nuevo Trámite Formal</h3>
+              <p class="form-instructions">Cree una boleta de trámite oficial. Se generará una alerta de firma inmediata en la bandeja de entrada.</p>
+
+              <form @submit.prevent="agregarDocumento">
+                <div class="form-grid-2">
+                  <div class="form-group">
+                    <label for="doc-cat">Categoría:*</label>
+                    <select id="doc-cat" v-model="nuevoDocumento.categoria" required>
+                      <option value="" disabled selected>Seleccione...</option>
+                      <option v-for="cat in categorias" :key="cat" :value="cat">{{ cat }}</option>
+                    </select>
+                  </div>
+
+                  <div class="form-group">
+                    <label for="doc-prio">Prioridad de Despacho:</label>
+                    <select id="doc-prio" v-model="nuevoDocumento.prioridad">
+                      <option value="alta">Alta (Atención hoy)</option>
+                      <option value="media">Media (Atención regular)</option>
+                      <option value="baja">Baja (Atención flexible)</option>
+                    </select>
+                  </div>
+
+                  <div class="form-group">
+                    <label for="doc-ticket2">Número de Ticket / Oficio:*</label>
+                    <input type="text" id="doc-ticket2" v-model="nuevoDocumento.ticket" placeholder="Ej: ULEAM-SG-2026-0034" required>
+                  </div>
+
+                  <div class="form-group">
+                    <label for="doc-rem2">Nombre del Remitente:*</label>
+                    <input type="text" id="doc-rem2" v-model="nuevoDocumento.remitente" placeholder="Ej: Ing. Juan Pérez" required>
+                  </div>
+                </div>
+
+                <div class="form-group">
+                  <label for="doc-fac2">Facultad / Unidad Remitente:*</label>
+                  <select id="doc-fac2" v-model="nuevoDocumento.facultad" @change="nuevoDocumento.carrera = ''" required>
+                    <option value="">Seleccione Facultad...</option>
+                    <option v-for="fac in facultadesParaDelegacion" :key="fac" :value="fac">{{ fac }}</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="doc-car2">Carrera:</label>
+                  <select id="doc-car2" v-model="nuevoDocumento.carrera" :disabled="!nuevoDocumento.facultad">
+                    <option value="">Aplica a toda la facultad...</option>
+                    <option v-for="carr in obtenerCarreras(nuevoDocumento.facultad)" :key="carr" :value="carr">{{ carr }}</option>
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label for="doc-dest2"><i class="fas fa-paper-plane"></i> Para (Destinatario):*</label>
+                  <select id="doc-dest2" v-model="nuevoDocumento.destinatarioId" required>
+                    <option value="">— Seleccione el destinatario del trámite —</option>
+                    <optgroup v-for="fac in facultadesParaDelegacion" :key="fac" :label="fac">
+                      <option v-for="usr in usuarios.filter(u => u.facultad === fac && u.id != sesion.id)" :key="usr.id" :value="usr.id">
+                        {{ usr.nombre }} · {{ usr.carrera || 'Sin Carrera' }}
+                      </option>
+                    </optgroup>
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label for="doc-asunto2">Asunto Breve / Descripción:*</label>
+                  <input type="text" id="doc-asunto2" v-model="nuevoDocumento.asunto" placeholder="Ej: Solicitud de apertura de cohorte Maestría Software" required>
+                </div>
+
+                <div class="form-actions-inline">
+                  <button type="submit" class="btn-primary-large"><i class="fas fa-pen-nib"></i> Registrar e Indexar Trámite</button>
+                  <button type="button" class="btn-cancel" @click="bandejaTab = 'recibidos'">Cancelar</button>
+                </div>
+              </form>
+            </div>
+          </div>
         </section>
 
 
@@ -644,9 +729,6 @@
             </button>
             <button class="sub-tab-btn" :class="{ activo: archivosTab === 'subir' }" @click="archivosTab = 'subir'">
               <i class="fas fa-cloud-arrow-up"></i> Subir Archivo Digital
-            </button>
-            <button class="sub-tab-btn" :class="{ activo: archivosTab === 'registrar' }" @click="archivosTab = 'registrar'">
-              <i class="fas fa-signature"></i> Registrar Trámite Formal
             </button>
           </div>
 
@@ -832,81 +914,6 @@
             </div>
           </div>
 
-          <!-- PESTAÑA 3: REGISTRAR TRÁMITE FORMAL (TICKET) -->
-          <div v-show="archivosTab === 'registrar'" class="tab-content-layout">
-            <div class="registro-documentos form-center-layout">
-              <h3><i class="fas fa-signature text-red-500"></i> Registrar Nuevo Trámite Formal</h3>
-              <p class="form-instructions">Cree una boleta de trámite oficial. Se generará una alerta de firma inmediata en la bandeja de entrada.</p>
-              
-              <form @submit.prevent="agregarDocumento">
-                <div class="form-grid-2">
-                  <div class="form-group">
-                    <label for="doc-cat">Categoría:*</label>
-                    <select id="doc-cat" v-model="nuevoDocumento.categoria" required>
-                      <option value="" disabled selected>Seleccione...</option>
-                      <option v-for="cat in categorias" :key="cat" :value="cat">{{ cat }}</option>
-                    </select>
-                  </div>
-                  
-                  <div class="form-group">
-                    <label for="doc-prio">Prioridad de Despacho:</label>
-                    <select id="doc-prio" v-model="nuevoDocumento.prioridad">
-                      <option value="alta">Alta (Atención hoy)</option>
-                      <option value="media">Media (Atención regular)</option>
-                      <option value="baja">Baja (Atención flexible)</option>
-                    </select>
-                  </div>
-
-                  <div class="form-group">
-                    <label for="doc-ticket">Número de Ticket / Oficio:*</label>
-                    <input type="text" id="doc-ticket" v-model="nuevoDocumento.ticket" placeholder="Ej: ULEAM-SG-2026-0034" required>
-                  </div>
-
-                  <div class="form-group">
-                    <label for="doc-rem">Nombre del Remitente:*</label>
-                    <input type="text" id="doc-rem" v-model="nuevoDocumento.remitente" placeholder="Ej: Ing. Juan Pérez" required>
-                  </div>
-                </div>
-
-                <div class="form-group">
-                  <label for="doc-fac">Facultad / Unidad Remitente:*</label>
-                  <select id="doc-fac" v-model="nuevoDocumento.facultad" @change="nuevoDocumento.carrera = ''" required>
-                    <option value="">Seleccione Facultad...</option>
-                    <option v-for="fac in facultadesParaDelegacion" :key="fac" :value="fac">{{ fac }}</option>
-                  </select>
-                </div>
-                <div class="form-group">
-                  <label for="doc-car">Carrera:</label>
-                  <select id="doc-car" v-model="nuevoDocumento.carrera" :disabled="!nuevoDocumento.facultad">
-                    <option value="">Aplica a toda la facultad...</option>
-                    <option v-for="carr in obtenerCarreras(nuevoDocumento.facultad)" :key="carr" :value="carr">{{ carr }}</option>
-                  </select>
-                </div>
-
-                <div class="form-group">
-                  <label for="doc-dest"><i class="fas fa-paper-plane"></i> Para (Destinatario):*</label>
-                  <select id="doc-dest" v-model="nuevoDocumento.destinatarioId" required>
-                    <option value="">— Seleccione el destinatario del trámite —</option>
-                    <optgroup v-for="fac in facultadesParaDelegacion" :key="fac" :label="fac">
-                      <option v-for="usr in usuarios.filter(u => u.facultad === fac && u.id != sesion.id)" :key="usr.id" :value="usr.id">
-                        {{ usr.nombre }} · {{ usr.carrera || 'Sin Carrera' }}
-                      </option>
-                    </optgroup>
-                  </select>
-                </div>
-
-                <div class="form-group">
-                  <label for="doc-asunto">Asunto Breve / Descripción:*</label>
-                  <input type="text" id="doc-asunto" v-model="nuevoDocumento.asunto" placeholder="Ej: Solicitud de apertura de cohorte Maestría Software" required>
-                </div>
-
-                <div class="form-actions-inline">
-                  <button type="submit" class="btn-primary-large"><i class="fas fa-pen-nib"></i> Registrar e Indexar Trámite</button>
-                  <button type="button" class="btn-cancel" @click="archivosTab = 'explorador'">Cancelar</button>
-                </div>
-              </form>
-            </div>
-          </div>
         </section>
 
 

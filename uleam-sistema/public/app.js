@@ -12,8 +12,8 @@ createApp({
       
       // Vistas y Pestañas
       vistaActual: "inicio",
-      bandejaTab: "recibidos", // "recibidos", "historial", "correo"
-      archivosTab: "explorador", // "explorador", "subir", "registrar"
+      bandejaTab: "recibidos", // "recibidos", "historial", "correo", "tramite"
+      archivosTab: "explorador", // "explorador", "subir"
       
       // Menú principal
       menu: [
@@ -24,6 +24,7 @@ createApp({
         { id: "ajustes", icono: "fa-sliders", texto: "Ajustes" },
         { id: "ayuda", icono: "fa-question-circle", texto: "Ayuda" }
       ],
+      correosVistos: [],
       
       // Datos
       documentos: [],
@@ -217,6 +218,13 @@ createApp({
         .sort((a, b) => new Date(b.fecha || 0) - new Date(a.fecha || 0));
     },
 
+    conteoCorreosNuevos() {
+      // Correos recibidos que el usuario aún no ha marcado como vistos
+      return this.correosRecibidos.filter(
+        (c) => !this.correosVistos.includes(c.id)
+      ).length;
+    },
+
     opcionesFacultad() {
       const facultades = new Set(this.usuarios.map((u) => u.facultad).filter(Boolean));
       // Si el set está vacío, usar las de delegación
@@ -398,8 +406,13 @@ createApp({
         this.documentos = documentos;
         this.usuarios = usuarios;
         this.archivos = archivos;
-        this.correos = correos;
         this.soporteTickets = soporte;
+
+        // Actualizar correos: preservar IDs vistos, agregar nuevos al array reactivo
+        const idsVistosActuales = new Set(this.correosVistos);
+        this.correos = correos;
+        // Guardar en localStorage los IDs vistos actualizados (por si el usuario cerró y reabrió)
+        localStorage.setItem("uleam_correos_vistos", JSON.stringify(this.correosVistos));
 
         // Cargar logs de auditoría si es Admin y la vista es Ajustes
         if (this.sesion.rol === "Administrador" && this.vistaActual === "ajustes") {
@@ -546,9 +559,12 @@ createApp({
         });
         this.documentos.push(creado);
         this.nuevoDocumento = { ticket: "", categoria: "", prioridad: "media", remitente: "", facultad: "", carrera: "", asunto: "", destinatarioId: "" };
-        this.mostrarToast(`Trámite "${creado.ticket}" indexado con éxito.`, "success");
-        // Volver al listado
-        this.archivosTab = "explorador";
+        this.mostrarToast(`Trámite "${creado.ticket}" indexado con éxito. Redirigiendo a Bandeja...`, "success");
+        // Redirigir a la bandeja de entrada donde aparecerá el nuevo trámite
+        this.vistaActual = "bandeja";
+        this.bandejaTab = "recibidos";
+        this.detalleActivoId = creado.id;
+        await this.cargarDatosIniciales();
       } catch (err) {
         this.mostrarToast(err.message, "error");
       }
@@ -806,6 +822,10 @@ createApp({
         this.correos.unshift(creado);
         this.nuevoCorreo = { destinatarioId: "", asunto: "", mensaje: "", adjuntos: [] };
         this.mostrarToast("Correo institucional enviado correctamente.", "success");
+        // Marcar automáticamente el correo enviado como visto (no generar notificación propia)
+        if (!this.correosVistos.includes(creado.id)) {
+          this.correosVistos.push(creado.id);
+        }
       } catch (err) {
         this.mostrarToast(err.message, "error");
       }
@@ -1010,6 +1030,19 @@ createApp({
       this.avatarArchivo = null;
     },
 
+    marcarCorreosVistos() {
+      let huboNuevos = false;
+      this.correosRecibidos.forEach((c) => {
+        if (!this.correosVistos.includes(c.id)) {
+          this.correosVistos.push(c.id);
+          huboNuevos = true;
+        }
+      });
+      if (huboNuevos) {
+        localStorage.setItem("uleam_correos_vistos", JSON.stringify(this.correosVistos));
+      }
+    },
+
     // Inicialización y destrucción de gráficos
     inicializarGraficos() {
       const opcionesComunes = {
@@ -1149,6 +1182,16 @@ createApp({
   },
 
   created() {
+    // Restaurar correos vistos
+    const vistos = localStorage.getItem("uleam_correos_vistos");
+    if (vistos) {
+      try {
+        this.correosVistos = JSON.parse(vistos) || [];
+      } catch (e) {
+        this.correosVistos = [];
+      }
+    }
+
     // Restaurar sesión persistida
     const sesionPersistida = localStorage.getItem("uleam_sesion");
     if (sesionPersistida) {

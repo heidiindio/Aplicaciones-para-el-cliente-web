@@ -28,7 +28,11 @@ function crearArchivo(req, res, cuerpo) {
   const rutaDestino = path.join(db.DIR_UPLOADS, nombreSeguro);
   
   const buffer = Buffer.from(contenidoBase64, "base64");
-  fs.writeFileSync(rutaDestino, buffer);
+  try {
+    fs.writeFileSync(rutaDestino, buffer);
+  } catch (err) {
+    console.error("Advertencia: No se pudo guardar el archivo físico en el servidor (entorno de sólo lectura):", err.message);
+  }
 
   const ext = path.extname(nombreOriginal).replace(".", "").toLowerCase() || "bin";
   const tamanoBytes = buffer.length;

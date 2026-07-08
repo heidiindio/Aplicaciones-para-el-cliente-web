@@ -20,6 +20,9 @@ function crearDocumento(req, res, cuerpo) {
     return { status: 400, data: { error: "Faltan campos obligatorios." } };
   }
 
+  // Leer documentos y usuarios desde la base de datos
+  const documentos = db.leerJSON(db.ARCHIVO_DOCUMENTOS);
+
   let destinatarioNombre = null;
   if (destinatarioId) {
     const usuarios = db.leerJSON(db.ARCHIVO_USUARIOS);
