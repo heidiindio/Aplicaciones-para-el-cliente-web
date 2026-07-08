@@ -215,6 +215,28 @@ async function manejarApi(req, res, pathname, urlObj) {
     result = { status: 200, data: auditoria };
   }
 
+  // 8. DIAGNÓSTICO DE BASE DE DATOS (Para Vercel)
+  else if (pathname === "/api/diagnostico" && req.method === "GET") {
+    try {
+      const usuariosList = db.leerJSON(db.ARCHIVO_USUARIOS);
+      const documentosList = db.leerJSON(db.ARCHIVO_DOCUMENTOS);
+      result = {
+        status: 200,
+        data: {
+          ok: true,
+          usuariosCount: usuariosList.length,
+          documentosCount: documentosList.length,
+          cwd: process.cwd(),
+          dir: __dirname,
+          usuariosPath: db.ARCHIVO_USUARIOS,
+          usuariosExists: fs.existsSync(db.ARCHIVO_USUARIOS)
+        }
+      };
+    } catch (e) {
+      result = { status: 500, data: { error: e.message } };
+    }
+  }
+
   return enviarJSON(res, result.status, result.data);
 }
 
@@ -248,8 +270,8 @@ async function handler(req, res) {
 // Exportar el handler para Vercel (y cualquier plataforma serverless)
 module.exports = handler;
 
-// Solo arrancar el servidor HTTP cuando se ejecuta directamente (desarrollo local)
-if (require.main === module) {
+// Solo arrancar el servidor HTTP cuando se ejecuta directamente en desarrollo local
+if (require.main === module && !process.env.VERCEL) {
   const servidor = http.createServer(handler);
   servidor.listen(PUERTO, () => {
     console.log(`✅ Servidor ULEAM corriendo en http://localhost:${PUERTO}`);
@@ -257,3 +279,4 @@ if (require.main === module) {
     console.log("   Módulo de base de datos JSON conectado.");
   });
 }
+
