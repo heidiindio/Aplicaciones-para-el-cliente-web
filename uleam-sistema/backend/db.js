@@ -1,13 +1,22 @@
 const fs = require("fs");
 const path = require("path");
 
-const DIR_UPLOADS = path.join(process.cwd(), "uploads");
-const ARCHIVO_USUARIOS = path.join(process.cwd(), "data", "usuarios.json");
-const ARCHIVO_DOCUMENTOS = path.join(process.cwd(), "data", "documentos.json");
-const ARCHIVO_ARCHIVOS = path.join(process.cwd(), "data", "archivos.json");
-const ARCHIVO_SOPORTE = path.join(process.cwd(), "data", "soporte.json");
-const ARCHIVO_CORREOS = path.join(process.cwd(), "data", "correos.json");
-const ARCHIVO_AUDITORIA = path.join(process.cwd(), "data", "auditoria.json");
+let baseDir = process.cwd();
+if (!fs.existsSync(path.join(baseDir, "data"))) {
+  if (fs.existsSync(path.join(baseDir, "uleam-sistema", "data"))) {
+    baseDir = path.join(baseDir, "uleam-sistema");
+  } else if (fs.existsSync(path.join(baseDir, "vue-project", "uleam-sistema", "data"))) {
+    baseDir = path.join(baseDir, "vue-project", "uleam-sistema");
+  }
+}
+
+const DIR_UPLOADS = path.join(baseDir, "uploads");
+const ARCHIVO_USUARIOS = path.join(baseDir, "data", "usuarios.json");
+const ARCHIVO_DOCUMENTOS = path.join(baseDir, "data", "documentos.json");
+const ARCHIVO_ARCHIVOS = path.join(baseDir, "data", "archivos.json");
+const ARCHIVO_SOPORTE = path.join(baseDir, "data", "soporte.json");
+const ARCHIVO_CORREOS = path.join(baseDir, "data", "correos.json");
+const ARCHIVO_AUDITORIA = path.join(baseDir, "data", "auditoria.json");
 
 // Asegurar directorios de forma segura (sin fallar si es de solo lectura)
 try {
