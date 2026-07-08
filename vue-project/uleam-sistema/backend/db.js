@@ -9,18 +9,30 @@ const ARCHIVO_SOPORTE = path.join(__dirname, "..", "data", "soporte.json");
 const ARCHIVO_CORREOS = path.join(__dirname, "..", "data", "correos.json");
 const ARCHIVO_AUDITORIA = path.join(__dirname, "..", "data", "auditoria.json");
 
-// Asegurar directorios
-fs.mkdirSync(path.dirname(ARCHIVO_USUARIOS), { recursive: true });
-fs.mkdirSync(DIR_UPLOADS, { recursive: true });
+// Asegurar directorios de forma segura (sin fallar si es de solo lectura)
+try {
+  fs.mkdirSync(path.dirname(ARCHIVO_USUARIOS), { recursive: true });
+  fs.mkdirSync(DIR_UPLOADS, { recursive: true });
+} catch (e) {
+  console.warn("Advertencia: No se pudieron crear los directorios físicos (entorno de solo lectura):", e.message);
+}
+
+// Caché en memoria para evitar errores de escritura en hostings como Vercel (EROFS)
+const cacheMemoria = {};
 
 function leerJSON(rutaArchivo, fallback = []) {
+  if (cacheMemoria[rutaArchivo]) {
+    return cacheMemoria[rutaArchivo];
+  }
   if (!fs.existsSync(rutaArchivo)) {
     escribirJSON(rutaArchivo, fallback);
     return fallback;
   }
   try {
     const contenido = fs.readFileSync(rutaArchivo, "utf-8");
-    return JSON.parse(contenido);
+    const datos = JSON.parse(contenido);
+    cacheMemoria[rutaArchivo] = datos;
+    return datos;
   } catch (error) {
     escribirJSON(rutaArchivo, fallback);
     return fallback;
@@ -28,7 +40,12 @@ function leerJSON(rutaArchivo, fallback = []) {
 }
 
 function escribirJSON(rutaArchivo, datos) {
-  fs.writeFileSync(rutaArchivo, JSON.stringify(datos, null, 2), "utf-8");
+  cacheMemoria[rutaArchivo] = datos;
+  try {
+    fs.writeFileSync(rutaArchivo, JSON.stringify(datos, null, 2), "utf-8");
+  } catch (error) {
+    console.error(`Error al escribir en archivo ${rutaArchivo} (se mantendrá en memoria virtual):`, error.message);
+  }
 }
 
 function siguienteId(lista) {

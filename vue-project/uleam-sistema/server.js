@@ -57,7 +57,11 @@ const TIPOS_MIME = {
   ".gif": "image/gif",
   ".pdf": "application/pdf",
   ".txt": "text/plain; charset=utf-8",
-  ".json": "application/json; charset=utf-8"
+  ".json": "application/json; charset=utf-8",
+  ".ico": "image/x-icon",
+  ".svg": "image/svg+xml",
+  ".woff": "font/woff",
+  ".woff2": "font/woff2"
 };
 
 function servirArchivoEstatico(req, res, pathname) {
@@ -77,8 +81,21 @@ function servirArchivoEstatico(req, res, pathname) {
 
   fs.readFile(rutaAbsoluta, (err, contenido) => {
     if (err) {
-      res.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" });
-      return res.end("404 - No encontrado");
+      // En Vercel, si no se encuentra el archivo estático, servir index.html (SPA fallback)
+      if (err.code === "ENOENT" && !pathname.startsWith("/uploads/")) {
+        fs.readFile(path.join(DIR_PUBLIC, "index.html"), (err2, html) => {
+          if (err2) {
+            res.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" });
+            return res.end("404 - No encontrado");
+          }
+          res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+          return res.end(html);
+        });
+      } else {
+        res.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" });
+        return res.end("404 - No encontrado");
+      }
+      return;
     }
     const ext = path.extname(rutaAbsoluta);
     res.writeHead(200, { "Content-Type": TIPOS_MIME[ext] || "application/octet-stream" });
@@ -201,8 +218,19 @@ async function manejarApi(req, res, pathname, urlObj) {
   return enviarJSON(res, result.status, result.data);
 }
 
-const servidor = http.createServer(async (req, res) => {
-  const urlObj = new URL(req.url, `http://${req.headers.host}`);
+// ─────────────────────────────────────────────────────────────────────────────
+// HANDLER PRINCIPAL — compatible con Vercel Serverless y Node.js local
+// ─────────────────────────────────────────────────────────────────────────────
+async function handler(req, res) {
+  // Normalizar la URL para Vercel (puede llegar sin host en algunos casos)
+  const host = req.headers.host || "localhost";
+  const base = `http://${host}`;
+  let urlObj;
+  try {
+    urlObj = new URL(req.url, base);
+  } catch (e) {
+    urlObj = new URL("/", base);
+  }
   const pathname = urlObj.pathname;
 
   try {
@@ -215,12 +243,17 @@ const servidor = http.createServer(async (req, res) => {
     console.error("Error en el servidor:", error);
     enviarJSON(res, 500, { error: "Error interno del servidor." });
   }
-});
+}
 
-servidor.listen(PUERTO, () => {
-  console.log(`✅ Servidor ULEAM corriendo en http://localhost:${PUERTO}`);
-  console.log("   Separación de archivos en backend/ implementada correctamente.");
-  console.log("   Módulo de base de datos JSON conectado.");
-});
+// Exportar el handler para Vercel (y cualquier plataforma serverless)
+module.exports = handler;
 
-module.exports = servidor;
+// Solo arrancar el servidor HTTP cuando se ejecuta directamente (desarrollo local)
+if (require.main === module) {
+  const servidor = http.createServer(handler);
+  servidor.listen(PUERTO, () => {
+    console.log(`✅ Servidor ULEAM corriendo en http://localhost:${PUERTO}`);
+    console.log("   Separación de archivos en backend/ implementada correctamente.");
+    console.log("   Módulo de base de datos JSON conectado.");
+  });
+}
