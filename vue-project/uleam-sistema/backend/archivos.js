@@ -6,17 +6,17 @@ function listarArchivos(req, res, urlObj) {
   const usuarioId = urlObj.searchParams.get("usuarioId");
   const archivos = db.leerJSON(db.ARCHIVO_ARCHIVOS);
   if (!usuarioId) return { status: 200, data: archivos };
-  const filtrados = archivos.filter((archivo) => 
+  const filtrados = archivos.filter((archivo) =>
     Number(archivo.propietarioId) === Number(usuarioId) || Number(archivo.destinatarioId) === Number(usuarioId)
   );
   return { status: 200, data: filtrados };
 }
 
 function crearArchivo(req, res, cuerpo) {
-  const { 
-    nombreOriginal, contenidoBase64, tipo, categoria, facultad, fecha, 
-    comentario, destinatarioId, propietarioId, propietarioNombre, titulo, 
-    etiquetas, tipoDocumento 
+  const {
+    nombreOriginal, contenidoBase64, tipo, categoria, facultad, fecha,
+    comentario, destinatarioId, propietarioId, propietarioNombre, titulo,
+    etiquetas, tipoDocumento
   } = cuerpo;
 
   if (!nombreOriginal || !contenidoBase64) {
@@ -26,9 +26,13 @@ function crearArchivo(req, res, cuerpo) {
   const archivos = db.leerJSON(db.ARCHIVO_ARCHIVOS);
   const nombreSeguro = `${Date.now()}_${nombreOriginal.replace(/[^a-zA-Z0-9._-]+/g, "_")}`;
   const rutaDestino = path.join(db.DIR_UPLOADS, nombreSeguro);
-  
+
   const buffer = Buffer.from(contenidoBase64, "base64");
-  fs.writeFileSync(rutaDestino, buffer);
+  try {
+    fs.writeFileSync(rutaDestino, buffer);
+  } catch (err) {
+    console.error("Advertencia: No se pudo guardar el archivo físico en el servidor (entorno de sólo lectura):", err.message);
+  }
 
   const ext = path.extname(nombreOriginal).replace(".", "").toLowerCase() || "bin";
   const tamanoBytes = buffer.length;

@@ -34,7 +34,7 @@ function leerCuerpoJSON(req) {
 function aplicarCabecerasCORS(res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, PATCH, OPTIONS, DELETE");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, X-User-Name, X-User-Id");
 }
 
 function enviarJSON(res, status, data) {
@@ -63,11 +63,11 @@ const TIPOS_MIME = {
 function servirArchivoEstatico(req, res, pathname) {
   aplicarCabecerasCORS(res);
   const rutaSolicitada = pathname === "/" ? "/index.html" : pathname;
-  
+
   const rutaAbsoluta = pathname.startsWith("/uploads/")
     ? path.join(__dirname, pathname.replace(/^\/+/, ""))
     : path.join(DIR_PUBLIC, rutaSolicitada);
-    
+
   const raizPermitida = pathname.startsWith("/uploads/") ? __dirname : DIR_PUBLIC;
 
   if (!rutaAbsoluta.startsWith(raizPermitida)) {
@@ -91,7 +91,7 @@ async function manejarApi(req, res, pathname, urlObj) {
     res.writeHead(204, {
       "Access-Control-Allow-Origin": "*",
       "Access-Control-Allow-Methods": "GET, POST, PATCH, OPTIONS, DELETE",
-      "Access-Control-Allow-Headers": "Content-Type"
+      "Access-Control-Allow-Headers": "Content-Type, X-User-Name, X-User-Id"
     });
     return res.end();
   }
@@ -102,7 +102,7 @@ async function manejarApi(req, res, pathname, urlObj) {
   if (pathname === "/api/login" && req.method === "POST") {
     const cuerpo = await leerCuerpoJSON(req);
     result = auth.login(req, res, cuerpo);
-  } 
+  }
   else if (pathname === "/api/recuperar-clave/solicitar" && req.method === "POST") {
     const cuerpo = await leerCuerpoJSON(req);
     result = auth.solicitarRecuperacion(req, res, cuerpo);
@@ -120,7 +120,7 @@ async function manejarApi(req, res, pathname, urlObj) {
       const cuerpo = await leerCuerpoJSON(req);
       result = usuarios.crearUsuario(req, res, cuerpo);
     }
-  } 
+  }
   else if (pathname.match(/^\/api\/usuarios\/(\d+)$/)) {
     const id = Number(pathname.match(/^\/api\/usuarios\/(\d+)$/)[1]);
     if (req.method === "DELETE") {
@@ -139,7 +139,7 @@ async function manejarApi(req, res, pathname, urlObj) {
       const cuerpo = await leerCuerpoJSON(req);
       result = documentos.crearDocumento(req, res, cuerpo);
     }
-  } 
+  }
   else if (pathname.match(/^\/api\/documentos\/(\d+)$/)) {
     const id = Number(pathname.match(/^\/api\/documentos\/(\d+)$/)[1]);
     if (req.method === "PATCH") {
@@ -156,7 +156,7 @@ async function manejarApi(req, res, pathname, urlObj) {
       const cuerpo = await leerCuerpoJSON(req);
       result = archivos.crearArchivo(req, res, cuerpo);
     }
-  } 
+  }
   else if (pathname.match(/^\/api\/archivos\/(\d+)$/)) {
     const id = Number(pathname.match(/^\/api\/archivos\/(\d+)$/)[1]);
     if (req.method === "DELETE") {
@@ -183,7 +183,7 @@ async function manejarApi(req, res, pathname, urlObj) {
       const cuerpo = await leerCuerpoJSON(req);
       result = soporte.crearTicket(req, res, cuerpo);
     }
-  } 
+  }
   else if (pathname.match(/^\/api\/soporte\/(\d+)$/)) {
     const id = Number(pathname.match(/^\/api\/soporte\/(\d+)$/)[1]);
     if (req.method === "PATCH") {
@@ -222,3 +222,5 @@ servidor.listen(PUERTO, () => {
   console.log("   Separación de archivos en backend/ implementada correctamente.");
   console.log("   Módulo de base de datos JSON conectado.");
 });
+
+module.exports = servidor;

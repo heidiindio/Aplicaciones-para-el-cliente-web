@@ -2,107 +2,109 @@ const fs = require("fs");
 const path = require("path");
 const db = require("./db");
 
-function listarCorreos(req, res) {
-  const correos = db.leerJSON(db.ARCHIVO_CORREOS);
-  return { status: 200, data: correos };
+function listarUsuarios(req, res) {
+  const usuarios = db.leerJSON(db.ARCHIVO_USUARIOS).map(({ clave, codigoRecuperacion, ...resto }) => resto);
+  return { status: 200, data: usuarios };
 }
 
-function enviarCorreo(req, res, cuerpo) {
-  const { destinatarioId, asunto, mensaje, adjuntos = [], remitenteId, remitenteNombre } = cuerpo;
-  if (!destinatarioId || !asunto || !mensaje) {
-    return { status: 400, data: { error: "Complete destinatario, asunto y mensaje." } };
+function crearUsuario(req, res, cuerpo) {
+  const { nombre, facultad, carrera, usuario, clave, rol, email } = cuerpo;
+  if (!nombre || !facultad || !usuario || !clave || !rol) {
+    return { status: 400, data: { error: "Faltan campos obligatorios." } };
   }
 
-  const correos = db.leerJSON(db.ARCHIVO_CORREOS);
   const usuarios = db.leerJSON(db.ARCHIVO_USUARIOS);
-  const destinatario = usuarios.find((u) => Number(u.id) === Number(destinatarioId));
-  const adjuntosPersistidos = [];
+  if (usuarios.some((u) => u.usuario.toLowerCase() === usuario.trim().toLowerCase())) {
+    return { status: 409, data: { error: "Ese nombre de usuario ya existe." } };
+  }
 
-  const archivos = db.leerJSON(db.ARCHIVO_ARCHIVOS);
+  const nuevo = {
+    id: db.siguienteId(usuarios),
+    usuario: usuario.trim().toLowerCase(),
+    clave,
+    nombre: nombre.trim(),
+    email: email ? email.trim() : `${usuario.trim().toLowerCase()}@live.uleam.edu.ec`,
+    facultad: facultad.trim(),
+    carrera: carrera ? carrera.trim() : "",
+    rol,
+    permisos: rol === "Administrador" ? "Lectura / Escritura / Gestión" : "Lectura / Escritura Limitada",
+    estado: "activo",
+    bloqueado: false,
+    fotoPerfil: ""
+  };
 
-  for (const adjunto of adjuntos) {
-    if (adjunto?.tipo === "local" && adjunto.contenidoBase64) {
-      // Guardar el archivo en disco
-      const nombreOriginal = adjunto.nombreOriginal;
-      const nombreSeguro = `${Date.now()}_${nombreOriginal.replace(/[^a-zA-Z0-9._-]+/g, "_")}`;
+  usuarios.push(nuevo);
+  db.escribirJSON(db.ARCHIVO_USUARIOS, usuarios);
+  db.registrarAuditoria("Administrador", "Usuario Creado", `Se creó el usuario ${nuevo.usuario}`);
+
+  const { clave: _clave, ...usuarioSinClave } = nuevo;
+  return { status: 201, data: usuarioSinClave };
+}
+
+function eliminarUsuario(req, res, id) {
+  const usuarios = db.leerJSON(db.ARCHIVO_USUARIOS);
+  const indice = usuarios.findIndex((u) => u.id === id);
+  if (indice === -1) {
+    return { status: 404, data: { error: "Usuario no encontrado." } };
+  }
+
+  const usuario = usuarios[indice];
+  if (usuario.bloqueado) {
+    return { status: 403, data: { error: "Este usuario está protegido y no se puede eliminar." } };
+  }
+
+  const [usuarioEliminado] = usuarios.splice(indice, 1);
+  db.escribirJSON(db.ARCHIVO_USUARIOS, usuarios);
+  db.registrarAuditoria("Administrador", "Usuario Eliminado", `Se eliminó el usuario ${usuarioEliminado.usuario}`);
+
+  return { status: 200, data: { ok: true, usuario: usuarioEliminado.usuario } };
+}
+
+function actualizarUsuario(req, res, id, cambios) {
+  const usuarios = db.leerJSON(db.ARCHIVO_USUARIOS);
+  const usuario = usuarios.find((u) => u.id === id);
+
+  if (!usuario) {
+    return { status: 404, data: { error: "Usuario no encontrado." } };
+  }
+
+  // Si tiene avatar en Base64, lo guardamos
+  if (cambios.fotoPerfilBase64 && cambios.fotoPerfilNombre) {
+    try {
+      const nombreSeguro = `avatar_${usuario.id}_${Date.now()}_${cambios.fotoPerfilNombre.replace(/[^a-zA-Z0-9._-]+/g, "_")}`;
       const rutaDestino = path.join(db.DIR_UPLOADS, nombreSeguro);
-      
-      const buffer = Buffer.from(adjunto.contenidoBase64, "base64");
-      fs.writeFileSync(rutaDestino, buffer);
 
-      const ext = path.extname(nombreOriginal).replace(".", "").toLowerCase() || "bin";
-      const tamanoBytes = buffer.length;
-
-      const nuevoArchivo = {
-        id: db.siguienteId(archivos),
-        nombreOriginal,
-        nombreStored: nombreSeguro,
-        ruta: `/uploads/${nombreSeguro}`,
-        tipo: adjunto.tipo || "application/octet-stream",
-        extension: ext,
-        tamano: tamanoBytes,
-        categoria: adjunto.categoria || "Documentación",
-        facultad: adjunto.facultad || "",
-        fecha: adjunto.fecha || db.hoyISO(),
-        comentario: adjunto.comentario || `Adjunto de correo: ${asunto}`,
-        titulo: adjunto.titulo || nombreOriginal.replace(/\.[^/.]+$/, ""),
-        etiquetas: adjunto.etiquetas || "correo",
-        tipoDocumento: adjunto.tipoDocumento || "",
-        propietarioId: Number(remitenteId) || null,
-        propietarioNombre: remitenteNombre || "",
-        destinatarioId: Number(destinatarioId),
-        destinatarioNombre: destinatario?.nombre || "",
-        estado: "enviado",
-        fechaRegistro: db.ahoraISO()
-      };
-
-      archivos.push(nuevoArchivo);
-      db.escribirJSON(db.ARCHIVO_ARCHIVOS, archivos);
-
-      adjuntosPersistidos.push({
-        tipo: "guardado",
-        archivoId: nuevoArchivo.id,
-        nombreOriginal: nuevoArchivo.nombreOriginal,
-        ruta: nuevoArchivo.ruta,
-        categoria: nuevoArchivo.categoria,
-        facultad: nuevoArchivo.facultad
-      });
-    } else if (adjunto?.tipo === "guardado" && adjunto.archivoId) {
-      const archivo = archivos.find((item) => Number(item.id) === Number(adjunto.archivoId));
-      if (archivo) {
-        adjuntosPersistidos.push({
-          tipo: "guardado",
-          archivoId: archivo.id,
-          nombreOriginal: archivo.nombreOriginal,
-          ruta: archivo.ruta,
-          categoria: archivo.categoria,
-          facultad: archivo.facultad
-        });
-      }
+      fs.writeFileSync(rutaDestino, Buffer.from(cambios.fotoPerfilBase64, "base64"));
+      usuario.fotoPerfil = `/uploads/${nombreSeguro}`;
+      db.registrarAuditoria(usuario.nombre, "Avatar Actualizado", "El usuario cambió su foto de perfil.");
+    } catch (e) {
+      console.error("Error al guardar el avatar:", e);
     }
   }
 
-  const nuevoCorreo = {
-    id: db.siguienteId(correos),
-    asunto: asunto.trim(),
-    mensaje: mensaje.trim(),
-    remitenteId: Number(remitenteId) || null,
-    remitenteNombre: remitenteNombre || "",
-    destinatarioId: Number(destinatarioId),
-    destinatarioNombre: destinatario?.nombre || "",
-    fecha: db.ahoraISO(),
-    estado: "enviado",
-    adjuntos: adjuntosPersistidos
-  };
+  // Modificaciones normales
+  if (cambios.nombre) usuario.nombre = cambios.nombre.trim();
+  if (cambios.email) usuario.email = cambios.email.trim();
+  if (cambios.clave) usuario.clave = cambios.clave.trim();
+  if (cambios.facultad) usuario.facultad = cambios.facultad.trim();
+  if (cambios.carrera) usuario.carrera = cambios.carrera.trim();
+  if (cambios.rol && !usuario.bloqueado) {
+    usuario.rol = cambios.rol;
+    usuario.permisos = cambios.rol === "Administrador" ? "Lectura / Escritura / Gestión" : "Lectura / Escritura Limitada";
+  }
+  if (cambios.estado !== undefined && !usuario.bloqueado) {
+    usuario.estado = cambios.estado;
+  }
 
-  correos.push(nuevoCorreo);
-  db.escribirJSON(db.ARCHIVO_CORREOS, correos);
-  db.registrarAuditoria(remitenteNombre, "Correo Enviado", `Envió mensaje interno a ${nuevoCorreo.destinatarioNombre}`);
+  db.escribirJSON(db.ARCHIVO_USUARIOS, usuarios);
 
-  return { status: 201, data: nuevoCorreo };
+  const { clave: _clave, codigoRecuperacion: _cod, ...usuarioSinClave } = usuario;
+  return { status: 200, data: usuarioSinClave };
 }
 
 module.exports = {
-  listarCorreos,
-  enviarCorreo
+  listarUsuarios,
+  crearUsuario,
+  eliminarUsuario,
+  actualizarUsuario
 };
