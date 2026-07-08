@@ -13,7 +13,7 @@ const correos = require("./backend/correos");
 const soporte = require("./backend/soporte");
 
 const PUERTO = process.env.PORT || 3000;
-const DIR_PUBLIC = path.join(__dirname, "public");
+const DIR_PUBLIC = path.join(process.cwd(), "public");
 
 function leerCuerpoJSON(req) {
   return new Promise((resolve) => {
@@ -69,10 +69,10 @@ function servirArchivoEstatico(req, res, pathname) {
   const rutaSolicitada = pathname === "/" ? "/index.html" : pathname;
 
   const rutaAbsoluta = pathname.startsWith("/uploads/")
-    ? path.join(__dirname, pathname.replace(/^\/+/, ""))
+    ? path.join(process.cwd(), pathname.replace(/^\/+/, ""))
     : path.join(DIR_PUBLIC, rutaSolicitada);
 
-  const raizPermitida = pathname.startsWith("/uploads/") ? __dirname : DIR_PUBLIC;
+  const raizPermitida = pathname.startsWith("/uploads/") ? process.cwd() : DIR_PUBLIC;
 
   if (!rutaAbsoluta.startsWith(raizPermitida)) {
     res.writeHead(403);

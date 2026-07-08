@@ -16,7 +16,16 @@ async function llamarApi(url, opciones = {}) {
     throw new Error('No se pudo conectar con el servidor. Verifique si el servicio está levantado en la nube o local.');
   }
 
-  const datos = await respuesta.json().catch(() => ({}));
+  let datos = {};
+  try {
+    const texto = await respuesta.text();
+    try {
+      datos = JSON.parse(texto);
+    } catch (e) {
+      datos = { error: texto };
+    }
+  } catch (err) {}
+
   if (!respuesta.ok) {
     throw new Error(datos.error || "Ocurrió un error inesperado.");
   }

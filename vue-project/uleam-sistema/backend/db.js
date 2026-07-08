@@ -1,13 +1,13 @@
 const fs = require("fs");
 const path = require("path");
 
-const DIR_UPLOADS = path.join(__dirname, "..", "uploads");
-const ARCHIVO_USUARIOS = path.join(__dirname, "..", "data", "usuarios.json");
-const ARCHIVO_DOCUMENTOS = path.join(__dirname, "..", "data", "documentos.json");
-const ARCHIVO_ARCHIVOS = path.join(__dirname, "..", "data", "archivos.json");
-const ARCHIVO_SOPORTE = path.join(__dirname, "..", "data", "soporte.json");
-const ARCHIVO_CORREOS = path.join(__dirname, "..", "data", "correos.json");
-const ARCHIVO_AUDITORIA = path.join(__dirname, "..", "data", "auditoria.json");
+const DIR_UPLOADS = path.join(process.cwd(), "uploads");
+const ARCHIVO_USUARIOS = path.join(process.cwd(), "data", "usuarios.json");
+const ARCHIVO_DOCUMENTOS = path.join(process.cwd(), "data", "documentos.json");
+const ARCHIVO_ARCHIVOS = path.join(process.cwd(), "data", "archivos.json");
+const ARCHIVO_SOPORTE = path.join(process.cwd(), "data", "soporte.json");
+const ARCHIVO_CORREOS = path.join(process.cwd(), "data", "correos.json");
+const ARCHIVO_AUDITORIA = path.join(process.cwd(), "data", "auditoria.json");
 
 // Asegurar directorios de forma segura (sin fallar si es de solo lectura)
 try {
