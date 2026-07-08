@@ -27,7 +27,8 @@ async function llamarApi(url, opciones = {}) {
   } catch (err) {}
 
   if (!respuesta.ok) {
-    throw new Error(datos.error || "Ocurrió un error inesperado.");
+    const msgError = datos.error || `Error del servidor (Status: ${respuesta.status}). Por favor, recargue la página.`;
+    throw new Error(msgError);
   }
   return datos;
 }
